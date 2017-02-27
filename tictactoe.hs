@@ -27,18 +27,20 @@ putmagicsquare = do { store "!" 2; store "2" 9;store "3" 4;
                       store "4" 7; store "5" 5;store "6" 4; 
                       store "6" 7; store "1" 5;store "8" 4; 
                     }
-data BoardState = BoardState { first :: [Int],
-                               second :: [Int],
+data BoardState = BoardState { xloc :: [Int],
+                               oloc :: [Int],
                                index :: Int
                              }  deriving (Show)
 
-gridpicture :: BoardState -> Picture
-gridpicture state = Circle 10
-  
+drawpicture :: BoardState -> Picture
+drawpicture (BoardState xloc oloc index)=
+  Pictures [ translate x y $ rectangleWire 90 90 | x<-[0,90..180], y<-[0,90..180] ]
+
+
 main =  do print (runState getrow fun)
            let x = (runState getrow fun)
            let y = (runState getcolumn fun)
            print (getboardsize)
-           display (InWindow "Reinforcement Learning" (330,330) (200,200)) (light cyan) (gridpicture (BoardState [1,2,3] [4,5,6] 1))
+           display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawpicture (BoardState [1,2,3] [4,5,6] 1))
            return ()
  
