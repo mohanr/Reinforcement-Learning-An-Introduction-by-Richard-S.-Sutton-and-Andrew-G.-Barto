@@ -2,6 +2,8 @@ module RL where
 import Control.Monad.State
 import qualified Data.Map as Map
 import Control.Applicative
+import Graphics.Gloss
+
 fun :: Map.Map String Int
 fun = Map.empty
 
@@ -30,10 +32,13 @@ data BoardState = BoardState { first :: [Int],
                                index :: Int
                              }  deriving (Show)
 
+gridpicture :: BoardState -> Picture
+gridpicture state = Circle 10
+  
 main =  do print (runState getrow fun)
            let x = (runState getrow fun)
            let y = (runState getcolumn fun)
            print (getboardsize)
+           display (InWindow "Reinforcement Learning" (330,330) (200,200)) (light cyan) (gridpicture (BoardState [1,2,3] [4,5,6] 1))
            return ()
- 
  
