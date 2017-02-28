@@ -32,15 +32,27 @@ data BoardState = BoardState { xloc :: [Int],
                                index :: Int
                              }  deriving (Show)
 
-drawpicture :: BoardState -> Picture
-drawpicture (BoardState xloc oloc index)=
-  Pictures [ translate x y $ rectangleWire 90 90 | x<-[0,90..180], y<-[0,90..180] ]
+translationaccumulator :: Float -> Float -> [Int] -> [Float] -> [Picture] -> [Picture]
+translationaccumulator _ _ _ [] ys = reverse ys
+translationaccumulator _ _ []  _ ys = reverse ys
+translationaccumulator x1 y (x:xs1) xs  ys = translationaccumulator (x1 + 90) (y + 90) xs1 xs ( (translate 0 (xs !! (x - 1)) $
+                                                                         rotate 45 $ pictures [ rectangleWire x1 y,rectangleWire y x1]) :ys) 
 
+drawBoard :: BoardState -> Picture
+drawBoard (BoardState xloc oloc index)=
+  Pictures $ [ translate x y $ rectangleWire 90 90| x<-[0,90..180], y<-[0,90..180] ] ++ [drawx]
+
+drawx :: Picture
+drawx = color black $ rotate 45 $
+        pictures [rectangleWire 90 0, rectangleWire 0 90]
+
+drawo :: Picture
+drawo = color black $ thickCircle 35 2
 
 main =  do print (runState getrow fun)
            let x = (runState getrow fun)
            let y = (runState getcolumn fun)
            print (getboardsize)
-           display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawpicture (BoardState [1,2,3] [4,5,6] 1))
+           display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState [1,2,3] [4,5,6] 1))
            return ()
  
