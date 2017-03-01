@@ -32,22 +32,25 @@ data BoardState = BoardState { xloc :: [Int],
                                index :: Int
                              }  deriving (Show)
 
-translationaccumulator :: Float -> Float -> [Int] -> [Float] -> [Picture] -> [Picture]
-translationaccumulator _ _ _ [] ys = reverse ys
-translationaccumulator _ _ []  _ ys = reverse ys
-translationaccumulator x1 y (x:xs1) xs  ys = translationaccumulator (x1 + 90) (y + 90) xs1 xs ( (translate 0 (xs !! (x - 1)) $
-                                                                         rotate 45 $ pictures [ rectangleWire x1 y,rectangleWire y x1]) :ys) 
+translationaccumulator ::   [Int] -> [Int] -> [(Float,Float)] -> [Picture] -> [Picture]
+translationaccumulator  [] _ _ ys = reverse ys
+translationaccumulator  _ []  _ ys = reverse ys
+translationaccumulator  (head1:xs1) (head:xs) angle  ys = let (a,b) = (angle !!(head - 1)) in
+                                                            let (c,d) = (angle  !!(head1 - 1)) in
+                                                              translationaccumulator xs1 xs angle ( ((translate a b) $
+                                                                                                 drawx ) : ((translate c d) $
+                                                                                                 drawo ):ys)
 
 drawBoard :: BoardState -> Picture
 drawBoard (BoardState xloc oloc index)=
-  Pictures $ [ translate x y $ rectangleWire 90 90| x<-[0,90..180], y<-[0,90..180] ] ++ [drawx]
+  Pictures $ [ translate x y $ rectangleWire 90 90| x<-[0,90..180], y<-[0,90..180] ] ++ (translationaccumulator xloc oloc [(0,180),(90,180),(180,180),(0,90),(90,90),(180,90),(0,0),(90,0),(180,0)] [])
 
 drawx :: Picture
-drawx = color black $ rotate 45 $
-        pictures [rectangleWire 90 0, rectangleWire 0 90]
+drawx = color green $ rotate 45 $
+        pictures [rectangleWire 1 45, rectangleWire  45 1] 
 
 drawo :: Picture
-drawo = color black $ thickCircle 35 2
+drawo = color rose $ thickCircle 25 2
 
 main =  do print (runState getrow fun)
            let x = (runState getrow fun)
