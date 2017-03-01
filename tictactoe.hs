@@ -52,10 +52,18 @@ drawx = color green $ rotate 45 $
 drawo :: Picture
 drawo = color rose $ thickCircle 25 2
 
+powersof2  :: [Int]  
+powersof2  =  [ 2 ^ i | i <- [0..9]]
+
+stateindex :: [Int] -> [Int] -> Int  
+stateindex xloc oloc =  let powers = powersof2 in
+                           foldl (+) 0 [  ( powers !!n) | n <- [0..(length xloc - 1)]]
+  
 main =  do print (runState getrow fun)
            let x = (runState getrow fun)
            let y = (runState getcolumn fun)
            print (getboardsize)
+           print (stateindex [1,2,3] [4,5,6])
            display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState [1,2,3] [4,5,6] 1))
            return ()
  
