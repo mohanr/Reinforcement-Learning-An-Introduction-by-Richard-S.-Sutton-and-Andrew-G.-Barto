@@ -73,9 +73,15 @@ stateindex :: [Int] -> [Int] -> Int
 stateindex xloc oloc =  let powers = powersof2 in
                           ((foldl (+) 0 [  ( powers !!n) | n <- [0..(length xloc - 1)]]) +
                           ( 512 * foldl (+) 0 [  ( powers !!n) | n <- [0..(length oloc - 1)]]))
+type ArrayAccess = ReaderT  (IOArray Int Int)  IO 
 
-  
-    
+readvalue ::  Int -> ArrayAccess Int   
+readvalue x    = do 
+  a <- ask
+  b <- liftIO( readArray a x);    
+  return b
+
+readfromarray = do { a <- createarray; liftIO (runReaderT (readvalue 1) a) }
 
 -- (defun set-value (state value)
 --   (setf (aref value-table (third state)) value))
