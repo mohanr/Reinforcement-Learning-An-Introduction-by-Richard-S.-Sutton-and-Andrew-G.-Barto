@@ -87,6 +87,7 @@ writevalue x y   = do
   a <- ask
   liftIO( writeArray a x y)    
 
+-- Test array accesses
 readfromarray = do { a <- createarray; liftIO (runReaderT (readvalue 1) a) }
 writetoarray = do { a <- createarray; liftIO (runReaderT (writevalue 1 2) a) }
 
