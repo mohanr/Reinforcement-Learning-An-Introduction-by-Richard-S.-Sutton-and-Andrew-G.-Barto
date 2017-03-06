@@ -4,22 +4,11 @@ import qualified Data.Map as Map
 import Control.Applicative
 import Graphics.Gloss
 import Data.Array.IO
-
+import Control.Monad.Reader
 fun :: Map.Map String Int
 fun = Map.empty
 
-funarray :: Map.Map String (IO (IOArray Int Int))
-funarray = Map.empty
 
-storearray :: String -> (IO (IOArray Int Int))-> State (Map.Map String (IO (IOArray Int Int))) ()
-storearray x value = do
-  funarray <- get
-  put (Map.insert x value funarray)
-
-retrievearray :: String -> State (Map.Map String (IO (IOArray Int Int))) (Maybe ((IO (IOArray Int Int))))
-retrievearray arr = do
-  funarray <- get
-  return (Map.lookup arr funarray) 
 
 store :: String -> Int-> State (Map.Map String Int) ()
 store x value = do
@@ -74,23 +63,19 @@ powersof2  =  [ 2 ^ i | i <- [0..9]]
 initialstate :: BoardState
 initialstate =  BoardState [0,0,0] [0,0,0] 0
 
-putmutablearray = do { let arr = newArray (512,512) 0 :: IO (IOArray Int Int) in
-                       storearray "value-table" arr;
-                     }
-getmutablearray = do { retrievearray "value-table";}
+createarray :: IO ( IOArray Int Int)
+createarray =  do {
+                       arr <- newArray (512,512) 0;
+                       return arr
+                  }
 
 stateindex :: [Int] -> [Int] -> Int  
 stateindex xloc oloc =  let powers = powersof2 in
                           ((foldl (+) 0 [  ( powers !!n) | n <- [0..(length xloc - 1)]]) +
                           ( 512 * foldl (+) 0 [  ( powers !!n) | n <- [0..(length oloc - 1)]]))
 
-value :: BoardState -> Int
-value  (BoardState xloc oloc index) = do arr <- (runState getmutablearray funarray)
-                                         v <- readArray arr index
-                                         return v
   
     
-
 
 -- (defun set-value (state value)
 --   (setf (aref value-table (third state)) value))
