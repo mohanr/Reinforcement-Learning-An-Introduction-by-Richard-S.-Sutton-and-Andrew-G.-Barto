@@ -94,8 +94,15 @@ writetoarray = do { a <- createarray; liftIO (runReaderT (writevalue 1 2) a) }
 showstate :: BoardState -> IO ()
 showstate (BoardState xloc oloc index) = display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState xloc oloc index) )
 
+data Player = X | O deriving Show
+isX :: Player -> Bool
+isX X = True
+isX O = False 
+
 game  = do
-  let initial_state = BoardState [0,0,0] [0,0,0] 0 in
+ --   "Plays 1 game against the random player. Also learns and prints.
+--    :X moves first and is random.  :O learns"
+ let initial_state = BoardState [0,0,0] [0,0,0] 0 in
     showstate initial_state
 
 main =  do print (runState getrow fun)
