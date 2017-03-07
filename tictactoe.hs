@@ -5,6 +5,9 @@ import Control.Applicative
 import Graphics.Gloss
 import Data.Array.IO
 import Control.Monad.Reader
+import System.Random
+import Data.List
+
 fun :: Map.Map String Int
 fun = Map.empty
 
@@ -99,10 +102,32 @@ isX :: Player -> Bool
 isX X = True
 isX O = False 
 
-game  = do
- --   "Plays 1 game against the random player. Also learns and prints.
---    :X moves first and is random.  :O learns"
- let initial_state = BoardState [0,0,0] [0,0,0] 0 in
+nextstate :: Player -> BoardState -> ()
+nextstate player (BoardState xloc oloc index)= do
+  let x-moves = xloc
+  let y-moves = oloc
+  ()
+
+-- Returns a list of unplayed locations
+possiblemoves :: BoardState -> [Int]
+possiblemoves (BoardState xloc oloc index) =
+  let xs =  [1,2,3,4,5,6,7,8,9] in
+    (xs \\ xloc) \\ oloc
+
+
+--   "Returns one of the unplayed locations, selected at random"
+randommove ::  BoardState -> IO Int
+randommove state = 
+  let possibles = possiblemoves state in
+    case possibles of
+      p ->   fmap (p !! ) $ randomRIO(0, length p - 1)
+              
+
+
+  --   "Plays 1 game against the random player. Also learns and prints.
+  --    :X moves first and is random.  :O learns"
+game = do
+  let initial_state = BoardState [0,0,0] [0,0,0] 0 in
     showstate initial_state
 
 main =  do print (runState getrow fun)
@@ -113,6 +138,11 @@ main =  do print (runState getrow fun)
 
            let ms = (runState putmagicsquare fun)
            print (stateindex [1,2,3] [4,5,6])
+
+           --Test Random move
+           p <- randommove (BoardState [1,2,3] [4,5,6] 0)
+           print p
+
            display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState [1,2,3] [4,5,6] 1))
            return ()
 
