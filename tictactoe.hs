@@ -31,10 +31,9 @@ getboardsize = do
              let y = (runState getcolumn fun) in
                 (Just (*) <*> (fst x)  <*>  (fst y) )
 
-putmagicsquare = do { store "!" 2; store "2" 9;store "3" 4;
-                      store "4" 7; store "5" 5;store "6" 4; 
-                      store "6" 7; store "1" 5;store "8" 4; 
-                    }
+magicsquare :: [Int]
+magicsquare = [2,9,4,7,5,4,7,5,4] 
+
 data BoardState = BoardState { xloc :: [Int],
                                oloc :: [Int],
                                index :: Int
@@ -102,11 +101,15 @@ isX :: Player -> Bool
 isX X = True
 isX O = False 
 
-nextstate :: Player -> BoardState -> ()
-nextstate player (BoardState xloc oloc index)= do
-  let x-moves = xloc
-  let y-moves = oloc
-  ()
+append :: Int -> [Int] -> [Int]
+append elem l = l ++ [elem]
+
+nextstate :: Player -> BoardState -> Int -> [Int]
+nextstate player (BoardState xloc oloc index) move= do
+  let xmoves = xloc in
+    let omoves = oloc in
+      case isX player of
+        True -> append move xmoves
 
 -- Returns a list of unplayed locations
 possiblemoves :: BoardState -> [Int]
@@ -136,7 +139,6 @@ main =  do print (runState getrow fun)
            let x = (runState getrow fun)
            let y = (runState getcolumn fun)
 
-           let ms = (runState putmagicsquare fun)
            print (stateindex [1,2,3] [4,5,6])
 
            --Test Random move
