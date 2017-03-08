@@ -62,8 +62,6 @@ drawo = color rose $ thickCircle 25 2
 powersof2  :: [Int]  
 powersof2  =  [ 2 ^ i | i <- [0..9]]
 
--- initialstate :: BoardState
--- initialstate =  BoardState [0,0,0] [0,0,0] 0
 
 createarray :: IO ( IOArray Int Int)
 createarray =  do {
@@ -105,24 +103,34 @@ isX O = False
 append :: Int -> [Int] -> [Int]
 append elem l = l ++ [elem]
 
-value :: ( IOArray Int Int) -> Int -> IO Int
-value a index =  liftIO (runReaderT (readvalue index ) a) 
+readthevalue :: ( IOArray Int Int) -> Int -> IO Int
+readthevalue a index =  liftIO (runReaderT (readvalue index ) a) 
 
+writethevalue :: ( IOArray Int Int) -> Int -> Int -> IO ()
+writethevalue a index value =  liftIO (runReaderT (writevalue index value) a) 
+  
 nextstate :: Player -> BoardState -> Int -> BoardState
 nextstate  player (BoardState xloc oloc index) move= BoardState newx newo newindex where
   newx = if isX player then (append move xloc) else xloc
   newo = if isX player then (append move oloc) else oloc
   newindex = stateindex newx newo
 
-magicnumber :: BoardState -> Int
-magicnumber (BoardState xloc oloc index) = sum $ ([magicsquare !! x | x <- xloc])
+magicnumber :: [Int]-> Int
+magicnumber l = sum $ ([magicsquare !! (x-1) | x <- l])
 
 
-newnextstate :: ( IOArray Int Int) -> BoardState-> BoardState
-newnextstate  a ( BoardState xloc oloc index) =  ( BoardState xloc oloc index)
+newnextstate :: ( IOArray Int Int) -> BoardState-> IO ()
+newnextstate  a ( BoardState xloc oloc index) =  do
+  x <- readthevalue a index;
+  if (x == 0)
+  then if ((magicnumber xloc ) == 15)
+       then (writethevalue a index 0)
+       else if ((magicnumber oloc ) == 15)
+            then (writethevalue a index 1)
+            else pure ()
+  else pure ()
 
--- Returns a list of unplayed locations
-
+--   Returns a list of unplayed locations
 possiblemoves :: BoardState -> [Int]
 possiblemoves (BoardState xloc oloc index) =
   let xs =  [1,2,3,4,5,6,7,8,9] in
