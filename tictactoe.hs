@@ -75,6 +75,7 @@ stateindex :: [Int] -> [Int] -> Int
 stateindex xloc oloc =  let powers = powersof2 in
                           ((foldl (+) 0 [  ( powers !!n) | n <- [0..(length xloc - 1)]]) +
                           ( 512 * foldl (+) 0 [  ( powers !!n) | n <- [0..(length oloc - 1)]]))
+
 type ArrayAccess = ReaderT  (IOArray Int Int)  IO 
 type ArrayWriteAccess = ReaderT  (IOArray Int Int)  IO() 
 
@@ -104,14 +105,24 @@ isX O = False
 append :: Int -> [Int] -> [Int]
 append elem l = l ++ [elem]
 
-nextstate :: Player -> BoardState -> Int -> [Int]
-nextstate player (BoardState xloc oloc index) move= do
-  let xmoves = xloc in
-    let omoves = oloc in
-      case isX player of
-        True -> append move xmoves
+value :: ( IOArray Int Int) -> Int -> IO Int
+value a index =  liftIO (runReaderT (readvalue index ) a) 
+
+nextstate :: Player -> BoardState -> Int -> BoardState
+nextstate  player (BoardState xloc oloc index) move= BoardState newx newo newindex where
+  newx = if isX player then (append move xloc) else xloc
+  newo = if isX player then (append move oloc) else oloc
+  newindex = stateindex newx newo
+
+magicnumber :: BoardState -> Int
+magicnumber (BoardState xloc oloc index) = sum $ ([magicsquare !! x | x <- xloc])
+
+
+newnextstate :: ( IOArray Int Int) -> BoardState-> BoardState
+newnextstate  a ( BoardState xloc oloc index) =  ( BoardState xloc oloc index)
 
 -- Returns a list of unplayed locations
+
 possiblemoves :: BoardState -> [Int]
 possiblemoves (BoardState xloc oloc index) =
   let xs =  [1,2,3,4,5,6,7,8,9] in
