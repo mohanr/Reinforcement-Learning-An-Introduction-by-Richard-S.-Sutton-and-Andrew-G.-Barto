@@ -119,9 +119,10 @@ magicnumber :: [Int]-> Int
 magicnumber l = sum $ ([magicsquare !! (x-1) | x <- l])
 
 
-newnextstate :: ( IOArray Int Int) -> BoardState-> IO ()
-newnextstate  a ( BoardState xloc oloc index) =  do
+nextvalue :: Player -> Int -> ( IOArray Int Int) -> BoardState-> IO ()
+nextvalue  player move a ( BoardState xloc oloc index) =  do
   x <- readthevalue a index;
+  let newstate = (nextstate player ( BoardState xloc oloc index) move)
   if (x == 0)
   then if ((magicnumber xloc ) == 15)
        then (writethevalue a index 0)
@@ -145,12 +146,15 @@ randommove state =
       p ->   fmap (p !! ) $ randomRIO(0, length p - 1)
               
 
-
   --   "Plays 1 game against the random player. Also learns and prints.
   --    :X moves first and is random.  :O learns"
+game :: IO ()
 game = do
-  let initial_state = BoardState [0,0,0] [0,0,0] 0 in
-    showstate initial_state
+  r1 <-  randomRIO(0, 1.0) :: IO Float
+  a <- createarray
+  r <- randommove initialstate
+  (nextvalue X r a initialstate)  where
+    initialstate = BoardState [0,0,0] [0,0,0] 0
 
 main =  do print (runState getrow fun)
            -- getrow and getcolumn can be refactored
