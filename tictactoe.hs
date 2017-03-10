@@ -63,7 +63,7 @@ powersof2  :: [Int]
 powersof2  =  [ 2 ^ i | i <- [0..9]]
 
 
-createarray :: IO ( IOArray Int Int)
+createarray :: IO ( IOArray Int Double)
 createarray =  do {
                        arr <- newArray (512,512) 0;
                        return arr
@@ -74,16 +74,16 @@ stateindex xloc oloc =  let powers = powersof2 in
                           ((foldl (+) 0 [  ( powers !!n) | n <- [0..(length xloc - 1)]]) +
                           ( 512 * foldl (+) 0 [  ( powers !!n) | n <- [0..(length oloc - 1)]]))
 
-type ArrayAccess = ReaderT  (IOArray Int Int)  IO 
-type ArrayWriteAccess = ReaderT  (IOArray Int Int)  IO() 
+type ArrayAccess = ReaderT  (IOArray Int Double)  IO 
+type ArrayWriteAccess = ReaderT  (IOArray Int Double)  IO() 
 
-readvalue ::  Int -> ArrayAccess Int   
+readvalue ::  Int -> ArrayAccess  Double  
 readvalue x    = do 
   a <- ask
   b <- liftIO( readArray a x);    
   return b
 
-writevalue ::  Int -> Int -> ArrayWriteAccess   
+writevalue ::  Int -> Double -> ArrayWriteAccess   
 writevalue x y   = do 
   a <- ask
   liftIO( writeArray a x y)    
@@ -103,10 +103,10 @@ isX O = False
 append :: Int -> [Int] -> [Int]
 append elem l = l ++ [elem]
 
-readthevalue :: ( IOArray Int Int) -> Int -> IO Int
+readthevalue :: ( IOArray Int Double) -> Int -> IO Double
 readthevalue a index =  liftIO (runReaderT (readvalue index ) a) 
 
-writethevalue :: ( IOArray Int Int) -> Int -> Int -> IO ()
+writethevalue :: ( IOArray Int Double) -> Int -> Double -> IO ()
 writethevalue a index value =  liftIO (runReaderT (writevalue index value) a) 
   
 nextstate :: Player -> BoardState -> Int -> BoardState
@@ -119,7 +119,7 @@ magicnumber :: [Int]-> Int
 magicnumber l = sum $ ([magicsquare !! (x-1) | x <- l])
 
 
-nextvalue :: Player -> Int -> ( IOArray Int Int) -> BoardState-> IO ()
+nextvalue :: Player -> Int -> ( IOArray Int Double) -> BoardState-> IO ()
 nextvalue  player move a ( BoardState xloc oloc index) =  do
   x <- readthevalue a index;
   let newstate = (nextstate player ( BoardState xloc oloc index) move)
@@ -145,9 +145,17 @@ randommove state =
     case possibles of
       p ->   fmap (p !! ) $ randomRIO(0, length p - 1)
               
+update :: ( IOArray Int Double) -> BoardState -> BoardState -> IO ()
+update a state newstate = do
+  valueofstate <- readthevalue a (RL.index state)
+  valueofnewstate <- readthevalue a (RL.index newstate)
 
-  --   "Plays 1 game against the random player. Also learns and prints.
-  --    :X moves first and is random.  :O learns"
+  let finalvalue = valueofstate + ( 0.5 *  (valueofnewstate - valueofstate)) in
+  --  This is the learning rule
+    writethevalue a (RL.index state) finalvalue
+
+--   "Plays 1 game against the random player. Also learns and prints.
+--    :X moves first and is random.  :O learns"
 game :: IO ()
 game = do
   r1 <-  randomRIO(0, 1.0) :: IO Float
