@@ -92,6 +92,8 @@ writevalue x y   = do
 readfromarray = do { a <- createarray; liftIO (runReaderT (readvalue 1) a) }
 writetoarray = do { a <- createarray; liftIO (runReaderT (writevalue 1 2) a) }
 
+writeandreadepsilon = do { a <- createarray;liftIO (runReaderT (writevalue 1 0.01) a); liftIO (runReaderT (readvalue 1) a) }
+
 showstate :: BoardState -> IO ()
 showstate (BoardState xloc oloc index) = display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState xloc oloc index) )
 
@@ -154,11 +156,29 @@ update a state newstate = do
   --  This is the learning rule
     writethevalue a (RL.index state) finalvalue
 
+randombetween :: IO Double
+randombetween = do
+  r1 <-  randomRIO(0, 1.0)
+  return r1
+
+exploratorymove :: ( IOArray Int Double) -> BoardState -> BoardState -> IO Double 
+exploratorymove a state newstate = do 
+  r1 <- randombetween;
+  explore r1 0.01
+    where
+      explore r epsilon
+        | r < epsilon = do
+            (update a state newstate)
+            valueofnewstate <- readthevalue a (RL.index newstate);
+            return valueofnewstate
+        | r >= epsilon = do
+            r2 <- randombetween;
+            explore r2 epsilon
+
 --   "Plays 1 game against the random player. Also learns and prints.
 --    :X moves first and is random.  :O learns"
 game :: IO ()
 game = do
-  r1 <-  randomRIO(0, 1.0) :: IO Float
   a <- createarray
   r <- randommove initialstate
   (nextvalue X r a initialstate)  where
