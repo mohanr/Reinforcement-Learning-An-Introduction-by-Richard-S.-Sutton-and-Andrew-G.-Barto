@@ -181,31 +181,45 @@ greedymove a player state =
                       LT -> choosebestmove  xs bestvalue bestmove;
                       GT -> return bestmove
 
-exploratorymove :: ( IOArray Int Double) -> BoardState -> BoardState -> IO Double 
-exploratorymove a state newstate = do 
+randomgreedy :: Double -> Int -> Int -> Int
+randomgreedy r1 rm gm = if (r1 < 0.01)
+                  then rm
+                  else gm
+
+gameplan :: ( IOArray Int Double) -> BoardState -> BoardState -> IO Double 
+gameplan a state newstate = do 
   r1 <- randombetween;
-  explore r1 0.01
-    where
-      explore r epsilon
-        | r < epsilon = do
-            result <- (terminalstatep a (ReinforcementLearning.index newstate))
-            if (result)
-              then do
-              (update a state newstate)
-              valueofnewstate <- readthevalue a (ReinforcementLearning.index newstate)
-              return valueofnewstate
-              else explore r epsilon
-        | r >= epsilon = 
-            explore r epsilon
+  result <- (terminalstatep a (ReinforcementLearning.index newstate));
+    case result of
+      True -> do
+        update a state newstate
+        valueofnewstate <- readthevalue a (ReinforcementLearning.index newstate)
+        return valueofnewstate
+      False -> do
+        rm <- randommove newstate
+        gm <- greedymove a O newstate
+        let randomorgreedy = randomgreedy r1 rm gm in
+          let newstate = (nextstate O newstate randomorgreedy) in
+            if not (r1 < 0.01)
+            then (update a state newstate)
+            else (update a state state)
+        result <- (terminalstatep a (ReinforcementLearning.index newstate));
+        valueofnewstate <- readthevalue a (ReinforcementLearning.index newstate);
+        if result
+        then return valueofnewstate
+        else gameplan a newstate newstate
+  
 
 --   "Plays 1 game against the random player. Also learns and prints.
 --    :X moves first and is random.  :O learns"
 game :: IO ()
 game = do
   a <- createarray
-  r <- randommove initialstate
-  (nextvalue X r a initialstate)  where
-    initialstate = BoardState [0,0,0] [0,0,0] 0
+  r <- randommove (BoardState [0,0,0] [0,0,0] 0)
+  let initialstate = BoardState [0,0,0] [0,0,0] 0 in
+    gameplan a initialstate (nextstate X initialstate r)
+  return ()
+
 
 main =  do print (runState getrow fun)
            -- getrow and getcolumn can be refactored
