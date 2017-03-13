@@ -1,4 +1,4 @@
-module RL where
+module ReinforcementLearning where
 import Control.Monad.State
 import qualified Data.Map as Map
 import Control.Applicative
@@ -92,7 +92,7 @@ writevalue x y   = do
 readfromarray = do { a <- createarray; liftIO (runReaderT (readvalue 1) a) }
 writetoarray = do { a <- createarray; liftIO (runReaderT (writevalue 1 2) a) }
 
-writeandreadepsilon = do { a <- createarray;liftIO (runReaderT (writevalue 1 0.01) a); liftIO (runReaderT (readvalue 1) a) }
+writeandreadvalue b= do { a <- createarray;liftIO (runReaderT (writevalue 1 b) a); liftIO (runReaderT (readvalue 1) a) }
 
 showstate :: BoardState -> IO ()
 showstate (BoardState xloc oloc index) = display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState xloc oloc index) )
@@ -149,17 +149,37 @@ randommove state =
               
 update :: ( IOArray Int Double) -> BoardState -> BoardState -> IO ()
 update a state newstate = do
-  valueofstate <- readthevalue a (RL.index state)
-  valueofnewstate <- readthevalue a (RL.index newstate)
+  valueofstate <- readthevalue a (ReinforcementLearning.index state)
+  valueofnewstate <- readthevalue a (ReinforcementLearning.index newstate)
 
   let finalvalue = valueofstate + ( 0.5 *  (valueofnewstate - valueofstate)) in
   --  This is the learning rule
-    writethevalue a (RL.index state) finalvalue
+    writethevalue a (ReinforcementLearning.index state) finalvalue
 
 randombetween :: IO Double
 randombetween = do
   r1 <-  randomRIO(0, 1.0)
   return r1
+
+terminalstatep :: ( IOArray Int Double) -> Int -> IO Bool
+terminalstatep a x = do
+  y <- readthevalue a x;
+  let result = (y == fromIntegral( round y))
+  return result
+  
+greedymove :: ( IOArray Int Double) ->Player -> BoardState -> IO Int
+greedymove a player state = 
+  let possibles = possiblemoves state in
+    case possibles of
+      p  -> let bestvalue = -1.0 in
+              let bestmove = 0 in
+                choosebestmove p bestvalue bestmove
+                where
+                  choosebestmove (x:xs) bestvalue bestmove = do
+                    xvalue <- (readthevalue a (ReinforcementLearning.index (nextstate player state x)));
+                    case compare bestvalue xvalue of
+                      LT -> choosebestmove  xs bestvalue bestmove;
+                      GT -> return bestmove
 
 exploratorymove :: ( IOArray Int Double) -> BoardState -> BoardState -> IO Double 
 exploratorymove a state newstate = do 
@@ -168,12 +188,15 @@ exploratorymove a state newstate = do
     where
       explore r epsilon
         | r < epsilon = do
-            (update a state newstate)
-            valueofnewstate <- readthevalue a (RL.index newstate);
-            return valueofnewstate
-        | r >= epsilon = do
-            r2 <- randombetween;
-            explore r2 epsilon
+            result <- (terminalstatep a (ReinforcementLearning.index newstate))
+            if (result)
+              then do
+              (update a state newstate)
+              valueofnewstate <- readthevalue a (ReinforcementLearning.index newstate)
+              return valueofnewstate
+              else explore r epsilon
+        | r >= epsilon = 
+            explore r epsilon
 
 --   "Plays 1 game against the random player. Also learns and prints.
 --    :X moves first and is random.  :O learns"
