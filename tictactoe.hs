@@ -7,6 +7,8 @@ import Data.Array.IO
 import Control.Monad.Reader
 import System.Random
 import Data.List
+import Control.Exception
+import System.IO.Error 
 
 fun :: Map.Map String Int
 fun = Map.empty
@@ -92,7 +94,6 @@ writevalue x y   = do
 readfromarray = do { a <- createarray; liftIO (runReaderT (readvalue 1) a) }
 writetoarray = do { a <- createarray; liftIO (runReaderT (writevalue 1 2) a) }
 
-writeandreadvalue b= do { a <- createarray;liftIO (runReaderT (writevalue 1 b) a); liftIO (runReaderT (readvalue 1) a) }
 
 showstate :: BoardState -> IO ()
 showstate (BoardState xloc oloc index) = display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState xloc oloc index) )
@@ -109,8 +110,8 @@ readthevalue :: ( IOArray Int Double) -> Int -> IO Double
 readthevalue a index =  liftIO (runReaderT (readvalue index ) a) 
 
 writethevalue :: ( IOArray Int Double) -> Int -> Double -> IO ()
-writethevalue a index value =  liftIO (runReaderT (writevalue index value) a) 
-  
+writethevalue a index value =  liftIO (runReaderT (writevalue index value) a)  
+
 nextstate :: Player -> BoardState -> Int -> BoardState
 nextstate  player (BoardState xloc oloc index) move= BoardState newx newo newindex where
   newx = if isX player then (append move xloc) else xloc
@@ -186,6 +187,8 @@ randomgreedy r1 rm gm = if (r1 < 0.01)
                   then rm
                   else gm
 
+
+
 gameplan :: ( IOArray Int Double) -> BoardState -> BoardState -> IO Double 
 gameplan a state newstate = do 
   r1 <- randombetween;
@@ -207,154 +210,37 @@ gameplan a state newstate = do
         valueofnewstate <- readthevalue a (ReinforcementLearning.index newstate);
         if result
         then return valueofnewstate
-        else gameplan a newstate newstate
+        else do
+             r <- randommove state
+             gameplan a newstate (nextstate X state r)
   
 
 --   "Plays 1 game against the random player. Also learns and prints.
 --    :X moves first and is random.  :O learns"
-game :: IO ()
+game :: IO Double
 game = do
   a <- createarray
   r <- randommove (BoardState [0,0,0] [0,0,0] 0)
   let initialstate = BoardState [0,0,0] [0,0,0] 0 in
     gameplan a initialstate (nextstate X initialstate r)
-  return ()
+
+playntimes :: Int -> IO ()
+playntimes n = playtime n 0 
+                where
+                  playtime :: Int -> Double -> IO ()
+                  playtime n acc
+                    | n == 0 = print acc
+                    | n > 0 = do
+                        result <- game;
+                        playtime (n - 1) (acc + result)
+  
 
 
 main =  do print (runState getrow fun)
-           -- getrow and getcolumn can be refactored
-           -- to remove 'store' 
-           let x = (runState getrow fun)
-           let y = (runState getcolumn fun)
 
-           print (stateindex [1,2,3] [4,5,6])
-
-           --Test Random move
-           p <- randommove (BoardState [1,2,3] [4,5,6] 0)
-           print p
-
+           -- ReinforcementLearning.playntimes 40
            display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState [1,2,3] [4,5,6] 1))
            return ()
-
-
--- (defvar value-table)
-
--- (defvar initial-state)
-
--- (defun init ()
---   (setq value-table (make-array (* 512 512) :initial-element nil))
---   (setq initial-state '(nil nil 0))
---   (set-value initial-state 0.5)
---   (values))
-
--- (defun value (state)
---   (aref value-table (third state)))
-
--- (defun set-value (state value)
---   (setf (aref value-table (third state)) value))
-  
--- (defun next-state (player state move)
---   "returns new state after making the indicated move by the indicated player"
---   (let ((X-moves (first state))
---         (O-moves (second state)))
---     (if (eq player :X)
---       (push move X-moves)
---       (push move O-moves))
---     (setq state (list X-moves O-moves (state-index X-moves O-moves)))
---     (when (null (value state))
---       (set-value state (cond ((any-n-sum-to-k? 3 15 X-moves)
---                               0)
---                              ((any-n-sum-to-k? 3 15 O-moves)
---                               1)
---                              ((= 9 (+ (length X-moves) (length O-moves)))
---                               0)
---                              (t 0.5))))
---     state))
-
-
--- (defun terminal-state-p (state)
---   (integerp (value state)))
-
--- (defvar alpha 0.5)
--- (defvar epsilon 0.01)
-
--- (defun possible-moves (state)
---   "Returns a list of unplayed locations"
---   (loop for i from 1 to 9 
---         unless (or (member i (first state))
---                    (member i (second state)))
---         collect i))
-
-
--- (defun random-move (state)
---   "Returns one of the unplayed locations, selected at random"
---   (let ((possible-moves (possible-moves state)))
---     (if (null possible-moves)
---       nil
---       (nth (random (length possible-moves))
---            possible-moves))))
-
--- (defun greedy-move (player state)
---   "Returns the move that, when played, gives the highest valued position"
---   (let ((possible-moves (possible-moves state)))
---     (if (null possible-moves)
---       nil
---       (loop with best-value = -1
---             with best-move
---             for move in possible-moves
---             for move-value = (value (next-state player state move))
---             do (when (> move-value best-value) 
---                  (setf best-value move-value)
---                  (setf best-move move))
---             finally (return best-move)))))
-
--- ; Now here is the main function
-
--- (defvar state)
-
--- (defun game (&optional quiet)
---   "Plays 1 game against the random player. Also learns and prints.
---    :X moves first and is random.  :O learns"
---   (setq state initial-state)
---   (unless quiet (show-state state))
---   (loop for new-state = (next-state :X state (random-move state)) 
---         for exploratory-move? = (< (random 1.0) epsilon)
---         do
---         (when (terminal-state-p new-state)
---           (unless quiet (show-state new-state))
---           (update state new-state quiet)
---           (return (value new-state)))
---         (setf new-state (next-state :O new-state 
---                                     (if exploratory-move?
---                                       (random-move new-state)
---                                       (greedy-move :O new-state))))
---         (unless exploratory-move?
---           (update state new-state quiet))
---         (unless quiet (show-state new-state))
---         (when (terminal-state-p new-state) (return (value new-state)))
---         (setq state new-state)))
-
--- (defun update (state new-state &optional quiet)
---   "This is the learning rule"
---   (set-value state (+ (value state)
---                       (* alpha
---                          (- (value new-state)
---                             (value state)))))
---   (unless quiet (format t "                    ~,3F" (value state))))
-
--- (defun run ()
---   (loop repeat 40 do (print (/ (loop repeat 100 sum (game t)) 
---                                 100.0))))
-
--- (defun runs (num-runs num-bins bin-size)   ; e.g., (runs 10 40 100)
---   (loop with array = (make-array num-bins :initial-element 0.0)
---         repeat num-runs do
---         (init)
---         (loop for i below num-bins do
---               (incf (aref array i)
---                     (loop repeat bin-size sum (game t))))
---         finally (loop for i below num-bins 
---                       do (print (/ (aref array i)
        
        
  
