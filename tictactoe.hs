@@ -9,6 +9,8 @@ import System.Random
 import Data.List
 import Control.Exception
 import System.IO.Error 
+import Text.Printf
+import Debug.Trace
 
 fun :: Map.Map String Int
 fun = Map.empty
@@ -104,7 +106,7 @@ isX X = True
 isX O = False 
 
 append :: Int -> [Int] -> [Int]
-append elem l = l ++ [elem]
+append elem l = l : elem
 
 readthevalue :: ( IOArray Int Double) -> Int -> IO Double
 readthevalue a index =  liftIO (runReaderT (readvalue index ) a) 
@@ -113,7 +115,7 @@ writethevalue :: ( IOArray Int Double) -> Int -> Double -> IO ()
 writethevalue a index value =  liftIO (runReaderT (writevalue index value) a)  
 
 nextstate :: Player -> BoardState -> Int -> BoardState
-nextstate  player (BoardState xloc oloc index) move= BoardState newx newo newindex where
+nextstate  player (BoardState xloc oloc index) move= traceShowId $  BoardState newx newo newindex where
   newx = if isX player then (append move xloc) else xloc
   newo = if isX player then (append move oloc) else oloc
   newindex = stateindex newx newo
@@ -124,8 +126,12 @@ magicnumber l = sum $ ([magicsquare !! (x-1) | x <- l])
 
 nextvalue :: Player -> Int -> ( IOArray Int Double) -> BoardState-> IO ()
 nextvalue  player move a ( BoardState xloc oloc index) =  do
-  x <- readthevalue a index;
+  x <- catch (readthevalue a index)(\(SomeException e) -> printf "Reading [%d} in Next value" index >> print e >> throwIO e)
   let newstate = (nextstate player ( BoardState xloc oloc index) move)
+  printf "Old state index is [%d]" index
+  printf "New state index is [%d]"  (ReinforcementLearning.index newstate)
+  mapM_ (putStr . show) xloc
+  mapM_ (putStr . show) oloc
   if (x == 0)
   then if ((magicnumber xloc ) == 15)
        then (writethevalue a index 0)
@@ -140,13 +146,18 @@ possiblemoves (BoardState xloc oloc index) =
   let xs =  [1,2,3,4,5,6,7,8,9] in
     (xs \\ xloc) \\ oloc
 
+debug :: IO Int -> IO Int
+debug value = do
+  x <- value
+  printf "Random move to [%d]\n" x
+  return x
 
 --   "Returns one of the unplayed locations, selected at random"
 randommove ::  BoardState -> IO Int
 randommove state = 
   let possibles = possiblemoves state in
     case possibles of
-      p ->   fmap (p !! ) $ randomRIO(0, length p - 1)
+      p -> debug $ fmap (p !! ) $ randomRIO(0, length p - 1)
               
 update :: ( IOArray Int Double) -> BoardState -> BoardState -> IO ()
 update a state newstate = do
@@ -164,7 +175,7 @@ randombetween = do
 
 terminalstatep :: ( IOArray Int Double) -> Int -> IO Bool
 terminalstatep a x = do
-  y <- readthevalue a x;
+  y <-  catch (readthevalue a x) (\(SomeException e) ->  print e >> printf "The index of value read is [%d]" x >> throwIO e)
   let result = (y == fromIntegral( round y))
   return result
   
@@ -177,7 +188,7 @@ greedymove a player state =
                 choosebestmove p bestvalue bestmove
                 where
                   choosebestmove (x:xs) bestvalue bestmove = do
-                    xvalue <- (readthevalue a (ReinforcementLearning.index (nextstate player state x)));
+                    xvalue <-  catch (readthevalue a (ReinforcementLearning.index (nextstate player state x)))(\(SomeException e) -> printf "Reading [%d} in greedy move" x >> print e >> throwIO e)
                     case compare bestvalue xvalue of
                       LT -> choosebestmove  xs bestvalue bestmove;
                       GT -> return bestmove
@@ -196,7 +207,7 @@ gameplan a state newstate = do
     case result of
       True -> do
         update a state newstate
-        valueofnewstate <- readthevalue a (ReinforcementLearning.index newstate)
+        valueofnewstate <- catch (readthevalue a (ReinforcementLearning.index newstate)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index newstate)]>> throwIO e)
         return valueofnewstate
       False -> do
         rm <- randommove newstate
@@ -207,7 +218,7 @@ gameplan a state newstate = do
             then (update a state newstate)
             else (update a state state)
         result <- (terminalstatep a (ReinforcementLearning.index newstate));
-        valueofnewstate <- readthevalue a (ReinforcementLearning.index newstate);
+        valueofnewstate <-  catch (readthevalue a (ReinforcementLearning.index newstate)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index newstate)]>> throwIO e)
         if result
         then return valueofnewstate
         else do
@@ -238,7 +249,7 @@ playntimes n = playtime n 0
 
 main =  do print (runState getrow fun)
 
-           -- ReinforcementLearning.playntimes 40
+           ReinforcementLearning.playntimes 40
            display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState [1,2,3] [4,5,6] 1))
            return ()
        
