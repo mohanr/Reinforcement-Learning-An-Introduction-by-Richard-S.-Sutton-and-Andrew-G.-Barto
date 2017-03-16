@@ -106,7 +106,7 @@ isX X = True
 isX O = False 
 
 append :: Int -> [Int] -> [Int]
-append elem l = l : elem
+append elem l = l ++ [elem]
 
 readthevalue :: ( IOArray Int Double) -> Int -> IO Double
 readthevalue a index =  liftIO (runReaderT (readvalue index ) a) 
