@@ -69,7 +69,7 @@ powersof2  =  [ 2 ^ i | i <- [0..9]]
 
 createarray :: IO ( IOArray Int Double)
 createarray =  do {
-                       arr <- newArray (512,512) 0;
+                       arr <- newArray (0,512*512) 0;
                        return arr
                   }
 
