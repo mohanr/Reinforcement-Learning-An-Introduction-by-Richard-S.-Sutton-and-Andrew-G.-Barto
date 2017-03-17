@@ -126,7 +126,7 @@ magicnumber :: [Int]-> Int
 magicnumber l = sum $ ([magicsquare !! (x-1) | x <- l])
 
 
-nextvalue :: Player -> Int -> ( IOArray Int Double) -> BoardState-> IO BoardState 
+nextvalue :: Player -> Int -> ( IOArray Int Double) -> BoardState-> IO (BoardState,IOArray Int Double) 
 nextvalue  player move a ( BoardState xloc oloc index) =  do
   x <- catch (readthevalue a index)(\(SomeException e) -> printf "Reading [%d} in Next value" index >> print e >> throwIO e)
   let newstate = (nextstate player ( BoardState xloc oloc index) move)
@@ -138,17 +138,17 @@ nextvalue  player move a ( BoardState xloc oloc index) =  do
   then if ((magicnumber xloc ) == 15)
        then do
             (writethevalue a index 0)
-            return newstate
+            return (newstate,a)
        else if ((magicnumber oloc ) == 15)
             then do
                  (writethevalue a index 1)
-                 return newstate
+                 return (newstate,a)
             else if ((length oloc )+(length xloc) == 9)
             then do
                  (writethevalue a index 0)
-                 return newstate
-            else return newstate
-  else return newstate
+                 return (newstate,a)
+            else return (newstate,a)
+  else return (newstate,a)
 
 --   Returns a list of unplayed locations
 possiblemoves :: BoardState -> [Int]
@@ -170,7 +170,7 @@ randommove state =
       -- p -> debug $ fmap (p !! ) $ randomRIO(0, length p - 1)
       p ->  fmap (p !! ) $ randomRIO(0, length p - 1)
               
-update :: ( IOArray Int Double) -> BoardState -> BoardState -> IO ()
+update :: ( IOArray Int Double) -> BoardState -> BoardState -> IO ( IOArray Int Double)
 update a state newstate = do
   valueofstate <- readthevalue a (ReinforcementLearning.index state)
   valueofnewstate <- readthevalue a (ReinforcementLearning.index newstate)
@@ -178,6 +178,7 @@ update a state newstate = do
   let finalvalue = valueofstate + ( 0.5 *  (valueofnewstate - valueofstate)) in
   --  This is the learning rule
     writethevalue a (ReinforcementLearning.index state) finalvalue
+  return a
 
 randombetween :: IO Double
 randombetween = do
@@ -191,7 +192,7 @@ terminalstatep a x = do
   let result = (y == fromIntegral( round y))
   return result
   
-greedymove :: ( IOArray Int Double) ->Player -> BoardState -> IO Int
+greedymove :: ( IOArray Int Double) ->Player -> BoardState -> IO (Int,IOArray Int Double)
 greedymove a player state = 
   let possibles = possiblemoves state in
     case possibles of
@@ -200,11 +201,11 @@ greedymove a player state =
                 choosebestmove p bestvalue bestmove
                 where
                   choosebestmove (x:xs) bestvalue bestmove = do
-                    nv <- nextvalue player x a state
+                    (nv,a) <- nextvalue player x a state
                     xvalue <-  catch (readthevalue a (ReinforcementLearning.index (nv)))(\(SomeException e) -> printf "Reading [%d} in greedy move" x >> print e >> throwIO e)
                     case compare bestvalue xvalue of
                       LT -> choosebestmove  xs bestvalue bestmove;
-                      GT -> return bestmove
+                      GT -> return (bestmove,a)
 
 randomgreedy :: Double -> Int -> Int -> Int
 randomgreedy r1 rm gm = if (r1 < 0.01)
@@ -219,26 +220,27 @@ gameplan a state newstate = do
   result <- (terminalstatep a (ReinforcementLearning.index newstate));
     case result of
       True -> do
-        update a state newstate
+        a <- update a state newstate
         valueofnewstate <- catch (readthevalue a (ReinforcementLearning.index newstate)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index newstate)]>> throwIO e)
         printf "Gameplan returns %f " valueofnewstate
         return (a,state,valueofnewstate)
       False -> do
         rm <- randommove newstate
-        gm <- greedymove a O newstate
-        nv <- nextvalue O (randomgreedy r1 rm gm) a state
-        unless (r1 < 0.01)
-          (update a state nv)
+        (gm,a) <- greedymove a O newstate
+        (nv,a) <- nextvalue O (randomgreedy r1 rm gm) a state
+        unless (r1 < 0.01) $ do
+          a <- (update a state nv)
+          return ()
         result <- (terminalstatep a (ReinforcementLearning.index nv));
-        valueofnewstate <-  catch (readthevalue a (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
+          valueofnewstate <-  catch (readthevalue a (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
         if result
           then do
-              printf "Gameplan returns %f " valueofnewstate
-              return (a,nv,valueofnewstate)
+          printf "Gameplan returns %f " valueofnewstate
+          return (a,nv,valueofnewstate)
           else do
-              r <- randommove state
-              nv1 <- nextvalue X r a state
-              gameplan a newstate (nv1)
+          r <- randommove state
+          (nv1,a) <- nextvalue X r a state
+          gameplan a newstate (nv1)
   
 
 --   "Plays 1 game against the random player. Also learns and prints.
