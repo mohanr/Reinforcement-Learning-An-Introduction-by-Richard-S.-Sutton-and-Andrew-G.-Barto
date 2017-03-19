@@ -185,12 +185,15 @@ randombetween = do
   r1 <-  randomRIO(0, 1.0)
   return r1
 
-  
+
 terminalstatep :: ( IOArray Int Double) -> Int -> IO Bool
 terminalstatep a x = do
-  y <-  catch (readthevalue a x) (\(SomeException e) ->  print e >> printf "The index of value read is [%d]" x >> throwIO e)
+  y <-  catch ( readthevalue a x) (\(SomeException e) ->  print e >> printf "The index of value read is [%d]" x >> throwIO e)
   let result = (y == fromIntegral( round y))
-  return result
+  do {
+    putStrLn ( show result);
+    return result
+    }
   
 greedymove :: ( IOArray Int Double) ->Player -> BoardState -> IO (Int,IOArray Int Double)
 greedymove a player state = 
@@ -222,7 +225,7 @@ gameplan a state newstate = do
       True -> do
         a <- update a state newstate
         valueofnewstate <- catch (readthevalue a (ReinforcementLearning.index newstate)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index newstate)]>> throwIO e)
-        printf "Gameplan returns %f " valueofnewstate
+        printf "Gameplan returns(True branch) %f " valueofnewstate
         return (a,state,valueofnewstate)
       False -> do
         rm <- randommove newstate
@@ -235,7 +238,7 @@ gameplan a state newstate = do
           valueofnewstate <-  catch (readthevalue a (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
         if result
           then do
-          printf "Gameplan returns %f " valueofnewstate
+          printf "Gameplan returns(False branch) %f " valueofnewstate
           return (a,nv,valueofnewstate)
           else do
           r <- randommove state
@@ -247,11 +250,14 @@ gameplan a state newstate = do
 --    :X moves first and is random.  :O learns"
 game :: BoardState  -> BoardState -> IOArray Int Double -> IO (IOArray Int Double,BoardState,Double) 
 game state newstate a  = do
+  initialvalue <- readthevalue  a 0
+  printf "Gameplan with Initial value is %f \n" initialvalue
   gameplan a state newstate
 
 playntimes :: Int -> IO ()
 playntimes n = do a <- createarray;
                   r <- (randommove (BoardState [0,0,0] [0,0,0] 0))
+                  writethevalue a 0 0.5
                   playtime a (BoardState [0,0,0] [0,0,0] 0) (nextstate X (BoardState [0,0,0] [0,0,0] 0) r) n 0 r
                     where
                       playtime :: IOArray Int Double -> BoardState -> BoardState -> Int -> Double -> Int -> IO ()
@@ -259,7 +265,7 @@ playntimes n = do a <- createarray;
                         | n == 0 = printf "Played 100 times %f" (acc/100.0)
                         | n > 0 = do
                             (newa, state, result )<- game s ns a; 
-                            printf "Game returns %f\n" result
+                            -- printf "Game returns %f\n" result
                             r1 <- randommove state
                             playtime newa state (nextstate X state r1) (n - 1) (acc + result) r1
   
