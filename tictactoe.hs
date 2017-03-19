@@ -68,7 +68,7 @@ powersof2  =  [ 2 ^ i | i <- [0..9]]
 
 createarray :: IO ( IOArray Int Double)
 createarray =  do {
-                       arr <- newArray (0,512*512) 0;
+                       arr <- newArray (0,512*512) (-1);
                        return arr
                   }
 
@@ -132,8 +132,8 @@ nextvalue  player move a ( BoardState xloc oloc index) =  do
   let newstate = (nextstate player ( BoardState xloc oloc index) move)
   printf "Old state index is [%d]" index
   printf "New state index is [%d]"  (ReinforcementLearning.index newstate)
-  mapM_ (putStr . show) xloc
-  mapM_ (putStr . show) oloc
+  -- mapM_ (putStr . show) xloc
+  -- mapM_ (putStr . show) oloc
   if (x == 0)
   then if ((magicnumber xloc ) == 15)
        then do
@@ -191,6 +191,7 @@ terminalstatep a x = do
   y <-  catch ( readthevalue a x) (\(SomeException e) ->  print e >> printf "The index of value read is [%d]" x >> throwIO e)
   let result = (y == fromIntegral( round y))
   do {
+    putStrLn (show y);
     putStrLn ( show result);
     return result
     }
@@ -256,18 +257,19 @@ game state newstate a  = do
 
 playntimes :: Int -> IO ()
 playntimes n = do a <- createarray;
-                  r <- (randommove (BoardState [0,0,0] [0,0,0] 0))
                   writethevalue a 0 0.5
-                  playtime a (BoardState [0,0,0] [0,0,0] 0) (nextstate X (BoardState [0,0,0] [0,0,0] 0) r) n 0 r
+                  r <- (randommove (BoardState [0,0,0] [0,0,0] 0))
+                  playtime a (BoardState [0,0,0] [0,0,0] 0) (nextvalue X r a (BoardState [0,0,0] [0,0,0] 0)) n 0 r
                     where
-                      playtime :: IOArray Int Double -> BoardState -> BoardState -> Int -> Double -> Int -> IO ()
+                      playtime :: IOArray Int Double -> BoardState -> IO (BoardState,IOArray Int Double) -> Int -> Double -> Int -> IO ()
                       playtime a s ns n acc r
-                        | n == 0 = printf "Played 100 times %f" (acc/100.0)
+                        | n == 0 = printf "\nPlayed 100 times %f  %f" acc (acc/100.0)
                         | n > 0 = do
-                            (newa, state, result )<- game s ns a; 
+                            (boardstate, _) <- ns 
+                            (newa, state, result )<- game s  boardstate a; 
                             -- printf "Game returns %f\n" result
                             r1 <- randommove state
-                            playtime newa state (nextstate X state r1) (n - 1) (acc + result) r1
+                            playtime newa state (nextvalue X  r1 a state) (n - 1) (acc + result) r1
   
 main =  do print (runState getrow fun)
 
