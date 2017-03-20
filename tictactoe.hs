@@ -63,19 +63,27 @@ drawo :: Picture
 drawo = color rose $ thickCircle 25 2
 
 powersof2  :: [Int]  
-powersof2  =  [ 2 ^ i | i <- [0..9]]
+powersof2  =  [ 2 ^ i | i <- [0..8]]
 
 
 createarray :: IO ( IOArray Int Double)
 createarray =  do {
-                       arr <- newArray (0,512*512) (-1);
+                       arr <- newArray (0,512*512) 0;
                        return arr
                   }
 
-stateindex :: [Int] -> [Int] -> Int  
-stateindex xloc oloc =  let powers = powersof2 in
-                          ((foldl (+) 0 [  ( powers !!n) | n <- [0..(length xloc - 1)]]) +
-                          ( 512 * foldl (+) 0 [  ( powers !!n) | n <- [0..(length oloc - 1)]]))
+-- stateindex :: [Int] -> [Int] -> Int  
+-- stateindex xloc oloc =  let powers = powersof2 in
+--                           ((foldl (+) 0 [  ( powers !!n) | n <- [0..(length xloc - 1)]]) +
+--                           -- ( 512 * foldl (+) 0 [  ( powers !!n) | n <- [0..(length oloc - 1)]]))
+--                           ( 16 * foldl (+) 0 [  ( powers !!n) | n <- [0..(length oloc - 1)]]))
+addVal :: Int -> [Int] -> [Int]
+addVal i [] = []
+addVal i (x:xs) = x+i : addVal i xs
+
+stateindex :: [Int] -> [Int] -> Int
+stateindex xloc oloc = sum (map (2^) xloc)
+                       + sum [2^n | n <- (addVal 16 oloc)]
 
 type ArrayAccess = ReaderT  (IOArray Int Double)  IO 
 type ArrayWriteAccess = ReaderT  (IOArray Int Double)  IO() 
@@ -272,7 +280,8 @@ playntimes n = do a <- createarray;
                             playtime newa state (nextvalue X  r1 a state) (n - 1) (acc + result) r1
   
 main =  do print (runState getrow fun)
-
+           let si = stateindex  [1,5,9] [1,3,7] in
+               printf "State Index is %d\n" si
            ReinforcementLearning.playntimes 100
            display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState [1,2,3] [4,5,6] 1))
            return ()
