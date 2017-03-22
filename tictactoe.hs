@@ -72,18 +72,13 @@ createarray =  do {
                        return arr
                   }
 
--- stateindex :: [Int] -> [Int] -> Int  
--- stateindex xloc oloc =  let powers = powersof2 in
---                           ((foldl (+) 0 [  ( powers !!n) | n <- [0..(length xloc - 1)]]) +
---                           -- ( 512 * foldl (+) 0 [  ( powers !!n) | n <- [0..(length oloc - 1)]]))
---                           ( 16 * foldl (+) 0 [  ( powers !!n) | n <- [0..(length oloc - 1)]]))
 addVal :: Int -> [Int] -> [Int]
 addVal i [] = []
-addVal i (x:xs) = x+i : addVal i xs
+addVal i (x:xs) = x * 512: addVal i xs
 
 stateindex :: [Int] -> [Int] -> Int
 stateindex xloc oloc = sum (map (2^) xloc)
-                       + sum [2^n | n <- (addVal 16 oloc)]
+                       + sum [2^n | n <- (addVal 512 oloc)]
 
 type ArrayAccess = ReaderT  (IOArray Int Double)  IO 
 type ArrayWriteAccess = ReaderT  (IOArray Int Double)  IO() 
@@ -140,8 +135,6 @@ nextvalue  player move a ( BoardState xloc oloc index) =  do
   let newstate = (nextstate player ( BoardState xloc oloc index) move)
   printf "Old state index is [%d]" index
   printf "New state index is [%d]"  (ReinforcementLearning.index newstate)
-  -- mapM_ (putStr . show) xloc
-  -- mapM_ (putStr . show) oloc
   if (x == 0)
   then if ((magicnumber xloc ) == 15)
        then do
@@ -210,14 +203,14 @@ greedymove a player state =
     case possibles of
       p  -> let bestvalue = -1.0 in
               let bestmove = 0 in
-                choosebestmove p bestvalue bestmove
+                choosebestmove a p bestvalue bestmove
                 where
-                  choosebestmove (x:xs) bestvalue bestmove = do
-                    (nv,a) <- nextvalue player x a state
-                    xvalue <-  catch (readthevalue a (ReinforcementLearning.index (nv)))(\(SomeException e) -> printf "Reading [%d} in greedy move" x >> print e >> throwIO e)
-                    case compare bestvalue xvalue of
-                      LT -> choosebestmove  xs bestvalue bestmove;
-                      GT -> return (bestmove,a)
+                  choosebestmove arr (x:xs) bestvalue1 bestmove1 = do
+                    (nv,b) <- nextvalue player x arr state
+                    xvalue <-  catch (readthevalue b (ReinforcementLearning.index (nv)))(\(SomeException e) -> printf "Reading [%d} in greedy move" x >> print e >> throwIO e)
+                    case compare bestvalue1 xvalue of
+                      LT -> choosebestmove b xs xvalue x;
+                      GT -> return (bestmove1,b)
 
 randomgreedy :: Double -> Int -> Int -> Int
 randomgreedy r1 rm gm = if (r1 < 0.01)
@@ -273,8 +266,8 @@ playntimes n = do a <- createarray;
                       playtime a s ns n acc r
                         | n == 0 = printf "\nPlayed 100 times %f  %f" acc (acc/100.0)
                         | n > 0 = do
-                            (boardstate, _) <- ns 
-                            (newa, state, result )<- game s  boardstate a; 
+                            (boardstate, b) <- ns 
+                            (newa, state, result )<- game s  boardstate b; 
                             -- printf "Game returns %f\n" result
                             r1 <- randommove state
                             playtime newa state (nextvalue X  r1 a state) (n - 1) (acc + result) r1
