@@ -110,8 +110,7 @@ isX O = False
 type StateValue sv = StateT BoardState IO sv
 
 append :: Int -> [Int] -> [Int]
--- append elem l = if elem == 0 then l else l ++ [elem]
-append elem l = l ++ [elem]
+append elem l = if elem == 0 then l else l ++ [elem]
 
 readthevalue :: ( IOArray Int Double) -> Int -> IO Double
 readthevalue a index =  liftIO (runReaderT (readvalue index ) a) 
@@ -132,29 +131,29 @@ magicnumber l = sum $ ([magicsquare !! (x-1) | x <- l, x > 0])
 
 nextvalue :: Player -> Int -> ( IOArray Int Double) -> BoardState-> IO (BoardState,IOArray Int Double) 
 nextvalue  player move a ( BoardState xloc oloc index) =  do
-  x <- catch (readthevalue a index)(\(SomeException e) -> printf "Reading [%d} in Next value" index >> print e >> throwIO e)
   let newstate = (nextstate player ( BoardState xloc oloc index) move)
-  -- printf "Old state index is [%d] Value read is [%f]" index x
-  -- printf "New state index is [%d]"  (ReinforcementLearning.index newstate)
-  print xloc
-  print oloc
-  printf "Magic number is %d" (magicnumber xloc)
-  printf "Magic number is %d" (magicnumber oloc)
+  x <- catch (readthevalue a (ReinforcementLearning.index newstate))(\(SomeException e) -> printf "Reading [%d} in Next value" index >> print e >> throwIO e)
+  printf "Move is [%d] " move
+  putStrLn (show player)
+  print (ReinforcementLearning.xloc newstate)
+  print (ReinforcementLearning.oloc newstate)
+  printf "Magic number is %d" (magicnumber  (ReinforcementLearning.xloc newstate))
+  printf "Magic number is %d" (magicnumber  (ReinforcementLearning.oloc newstate))
   if (x == 0)
   then if ((magicnumber xloc ) == 15)
        then do
-            (writethevalue a index 0)
+            (writethevalue a (ReinforcementLearning.index newstate) 0)
             return (newstate,a)
        else if ((magicnumber oloc ) == 15)
             then do
-                 (writethevalue a index 1)
+                 (writethevalue a  (ReinforcementLearning.index newstate) 1)
                  return (newstate,a)
             else if ((length oloc )+(length xloc) == 9)
             then do
-                 (writethevalue a index 0)
+                 (writethevalue a  (ReinforcementLearning.index newstate) 0)
                  return (newstate,a)
             else do
-                 (writethevalue a index 0.5)
+                 (writethevalue a  (ReinforcementLearning.index newstate) 0.5)
                  return (newstate,a)
   else return (newstate,a)
 
@@ -200,8 +199,9 @@ terminalstatep a x = do
   y <-  catch ( readthevalue a x) (\(SomeException e) ->  print e >> printf "Read in terminalstep throws exception" >> throwIO e)
   let result = (y == fromIntegral( round y))
   do {
-    putStrLn (show y);
-    putStrLn ( show ( fromIntegral( round y)));
+    -- putStrLn (show y);
+    -- putStrLn ( show ( fromIntegral( round y)));
+    -- return result
     return result
     }
   
@@ -217,10 +217,13 @@ greedymove a player state =
                   choosebestmove arr (x:xs) bestvalue1 bestmove1 = do
                     (nv,b) <- nextvalue player x arr state
                     xvalue <-  catch (readthevalue b (ReinforcementLearning.index (nv)))(\(SomeException e) -> printf "Reading [%d} in greedy move" x >> print e >> throwIO e)
-                    case compare bestvalue1 xvalue of
-                      LT -> choosebestmove b xs xvalue x;
-                      GT -> return (bestmove1,b)
-
+                    if (null xs )
+                      then case compare bestvalue1 xvalue of
+                             LT -> if (null xs) then return(0,a) else choosebestmove b xs xvalue x;
+                             GT -> return (bestmove1,b)
+                      else return(0,a)
+                      -- EQ -> choosebestmove b xs xvalue x;
+  
 randomgreedy :: Double -> Int -> Int -> Int
 randomgreedy r1 rm gm = if (r1 < 0.01)
                   then rm
@@ -232,8 +235,6 @@ gameplan :: ( IOArray Int Double) -> BoardState -> BoardState -> IO (IOArray Int
 gameplan a state newstate = do 
   r1 <- randombetween;
   initialvalue <- readthevalue  a 0
-  printf "Gameplan with Initial value is %f \n" initialvalue
-  printf "Checking terminal step with %d \n" (ReinforcementLearning.index newstate)
   result <- (terminalstatep a (ReinforcementLearning.index newstate));
     case result of
       True -> do
