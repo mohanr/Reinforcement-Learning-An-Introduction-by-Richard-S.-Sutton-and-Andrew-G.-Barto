@@ -214,15 +214,14 @@ greedymove a player state =
               let bestmove = 0 in
                 choosebestmove a p bestvalue bestmove
                 where
+                  choosebestmove arr [] bestvalue1 bestmove1 = return (bestmove1,a)
                   choosebestmove arr (x:xs) bestvalue1 bestmove1 = do
                     (nv,b) <- nextvalue player x arr state
                     xvalue <-  catch (readthevalue b (ReinforcementLearning.index (nv)))(\(SomeException e) -> printf "Reading [%d} in greedy move" x >> print e >> throwIO e)
-                    if (null xs )
-                      then case compare bestvalue1 xvalue of
-                             LT -> if (null xs) then return(0,a) else choosebestmove b xs xvalue x;
-                             GT -> return (bestmove1,b)
-                      else return(0,a)
-                      -- EQ -> choosebestmove b xs xvalue x;
+                    case compare bestvalue1 xvalue of
+                      LT -> choosebestmove b xs xvalue x;
+                      GT -> return (bestmove1,b)
+                      EQ -> return (bestmove1,b)
   
 randomgreedy :: Double -> Int -> Int -> Int
 randomgreedy r1 rm gm = if (r1 < 0.01)
@@ -285,6 +284,6 @@ playntimes n = do a <- createarray;
                             playtime (BoardState [] [] 0) (nextvalue X  r1 newa (BoardState [] [] 0)) (n - 1) (acc + result) r1
   
 main =  do print (magicnumber [0,0,0,8,9,7,2,5,1,6,3,4])
-           ReinforcementLearning.playntimes 100 
+           ReinforcementLearning.playntimes 1 
            display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState [1,2,3] [4,5,6] 1))
            return ()
