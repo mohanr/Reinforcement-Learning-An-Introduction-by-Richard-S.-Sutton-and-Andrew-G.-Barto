@@ -197,19 +197,18 @@ randombetween = do
   return r1
 
 
-terminalstatep :: ( IOArray Int Double) -> Int -> IO Bool
-terminalstatep a x = do
+terminalstatep :: (String -> IO()) ->( IOArray Int Double) -> Int -> IO Bool
+terminalstatep log a x = do
   y <-  catch ( readthevalue a x) (\(SomeException e) ->  print e >> printf "Read in terminalstep throws exception" >> throwIO e)
   let result = (y == fromIntegral( round y))
   do {
     -- putStrLn (show y);
     -- putStrLn ( show ( fromIntegral( round y)));
-    -- return result
     return result
     }
   
-greedymove :: ( IOArray Int Double) ->Player -> BoardState -> IO (Int,IOArray Int Double)
-greedymove a player state = 
+greedymove ::  (String -> IO()) ->( IOArray Int Double) ->Player -> BoardState -> IO (Int,IOArray Int Double)
+greedymove log a player state = 
   let possibles = possiblemoves state in
     case possibles of
       [] -> return (0, a)
@@ -237,7 +236,7 @@ gameplan :: (String -> IO()) ->( IOArray Int Double) -> BoardState -> BoardState
 gameplan log a state newstate = do 
   r1 <- randombetween;
   initialvalue <- readthevalue  a 0
-  result <- (terminalstatep a (ReinforcementLearning.index newstate));
+  result <- (terminalstatep log a (ReinforcementLearning.index newstate));
     case result of
       True -> do
         b <- update a state newstate
@@ -246,25 +245,31 @@ gameplan log a state newstate = do
         return (b,newstate,valueofnewstate)
       False -> do
         rm <- randommove newstate
-        (gm,c) <- greedymove a O newstate
-        (nv,d) <- nextvalue logs O (randomgreedy r1 rm gm) c newstate
-        d' <- if r1 < 0.01 then return d else update d state nv
-        result <- (terminalstatep d' (ReinforcementLearning.index nv));
-        valueofnewstate <-  catch (readthevalue d' (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
-        if result
-          then do
-          log $ printf "Gameplan returns(False branch) %f\n " valueofnewstate
-          return (d',nv,valueofnewstate)
+        (gm,c) <- greedymove log a O newstate
+        log $ printf "Greedy Move is %d \n " gm
+        valueofnewstate <-  catch (readthevalue c (ReinforcementLearning.index newstate)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index newstate)]>> throwIO e)
+        if (gm == 0)
+          then do return(c,newstate,valueofnewstate)
           else do
-          r <- randommove newstate
-          (nv1,d') <- nextvalue logs X r d' newstate
-          gameplan log d' newstate (nv1)
+          (nv,d) <- nextvalue logs O (randomgreedy r1 rm gm) c newstate
+          d' <- if r1 < 0.01 then return d else update d state nv
+          result <- (terminalstatep log d' (ReinforcementLearning.index nv));
+          valueofnewstate <-  catch (readthevalue d' (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
+          if result
+          then do
+            log $ printf "Gameplan returns(False branch) %f\n " valueofnewstate
+            return (d',nv,valueofnewstate)
+          else do
+            r <- randommove newstate
+            (nv1,d') <- nextvalue logs X r d' newstate
+            gameplan log d' newstate (nv1)
   
 
 --   "Plays 1 game against the random player. Also learns and prints.
 --    :X moves first and is random.  :O learns"
 game ::  (String -> IO()) ->BoardState  -> BoardState -> IOArray Int Double -> IO (IOArray Int Double,BoardState,Double) 
 game log state newstate a  = do
+  log $ "Call game"
   (newa, state, result )<-  gameplan log a state newstate
   return (newa, state, result )
    
@@ -286,6 +291,6 @@ playntimes n = do a <- createarray;
                             playtime (BoardState [] [] 0) (nextvalue logs X  r1 newa (BoardState [] [] 0)) (n - 1) (acc + result) r1
   
 main =  do print (magicnumber [0,0,0,8,9,7,2,5,1,6,3,4])
-           ReinforcementLearning.playntimes 1 
+           ReinforcementLearning.playntimes 10 
            display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState [1,2,3] [4,5,6] 1))
            return ()
