@@ -201,8 +201,7 @@ terminalstatep log a x = do
   y <-  catch ( readthevalue a x) (\(SomeException e) ->  print e >> printf "Read in terminalstep throws exception" >> throwIO e)
   let result = (y == fromIntegral( round y))
   do {
-    log $ "Terminal Step " ++ putStrLn (show y);
-    log $ putStrLn ( show ( fromIntegral( round y)));
+    log $ printf "Terminal Step - Value is %f" y;
     return result
     }
   
