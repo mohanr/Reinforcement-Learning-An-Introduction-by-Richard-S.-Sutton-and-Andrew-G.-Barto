@@ -201,8 +201,8 @@ terminalstatep log a x = do
   y <-  catch ( readthevalue a x) (\(SomeException e) ->  print e >> printf "Read in terminalstep throws exception" >> throwIO e)
   let result = (y == fromIntegral( round y))
   do {
-    -- putStrLn (show y);
-    -- putStrLn ( show ( fromIntegral( round y)));
+    log $ "Terminal Step " ++ putStrLn (show y);
+    log $ putStrLn ( show ( fromIntegral( round y)));
     return result
     }
   
@@ -224,10 +224,10 @@ greedymove log a player state =
                       GT -> return (bestmove1,b)
                       EQ -> return (bestmove1,b)
   
-randomgreedy :: Double -> Int -> Int -> Int
-randomgreedy r1 rm gm = if (r1 < 0.01)
-                  then rm
-                  else gm
+randomgreedy :: (String -> IO()) ->Double -> Int -> Int -> Int
+randomgreedy log r1 rm gm = if (r1 < 0.01)
+                            then rm
+                            else gm
 
 
 
@@ -248,20 +248,21 @@ gameplan log a state newstate = do
         log $ printf "Greedy Move is %d \n " gm
         valueofnewstate <-  catch (readthevalue c (ReinforcementLearning.index newstate)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index newstate)]>> throwIO e)
         if (gm == 0)
-          then do return(c,newstate,valueofnewstate)
-          else do
-          (nv,d) <- nextvalue logs O (randomgreedy r1 rm gm) c newstate
-          d' <- if r1 < 0.01 then return d else update d state nv
-          result <- (terminalstatep log d' (ReinforcementLearning.index nv));
-          valueofnewstate <-  catch (readthevalue d' (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
-          if result
           then do
-            log $ printf "Gameplan returns(False branch) %f\n " valueofnewstate
-            return (d',nv,valueofnewstate)
+            return(c,newstate,valueofnewstate)
           else do
-            r <- randommove newstate
-            (nv1,d') <- nextvalue logs X r d' newstate
-            gameplan log d' newstate (nv1)
+            (nv,d) <- nextvalue logs O (randomgreedy log r1 rm gm) c newstate
+            d' <- if r1 < 0.01 then return d else update d state nv
+            result1 <- (terminalstatep log d' (ReinforcementLearning.index nv));
+            valueofnewstate1 <-  catch (readthevalue d' (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
+            if result1
+              then do
+              log $ printf "Gameplan returns(False branch) %f\n " valueofnewstate1
+              return (d',nv,valueofnewstate1)
+              else do
+              r <- randommove newstate
+              (nv1,d1') <- nextvalue logs X r d' newstate
+              gameplan log d1' newstate (nv1)
   
 
 --   "Plays 1 game against the random player. Also learns and prints.
@@ -272,24 +273,23 @@ game log state newstate a  = do
   (newa, state, result )<-  gameplan log a state newstate
   return (newa, state, result )
    
-playntimes :: Int -> IO ()
-playntimes n = do a <- createarray;
-                  writethevalue a 0 0.5
-                  r <- (randommove (BoardState [] [] 0))
-                  playtime  (BoardState [] [] 0) (nextvalue logs X r a (BoardState [] [] 0)) n 0 r
-                    where
-                      playtime ::  BoardState -> IO (BoardState,IOArray Int Double) -> Int -> Double -> Int -> IO ()
-                      playtime  s ns n acc r
-                        | n == 0 = printf "\nPlayed 100 times %f  %f" acc (acc/100.0)
-                        | n > 0 = do
-                            (boardstate, b) <- ns 
-                            (newa, state, result )<- game logs s  boardstate b; 
-                            printf "Game returns %f\n" result
-                            r1 <- randommove (BoardState [] [] 0)
-                            -- playtime state (nextvalue logs X  r1 newa state) (n - 1) (acc + result) r1
-                            playtime (BoardState [] [] 0) (nextvalue logs X  r1 newa (BoardState [] [] 0)) (n - 1) (acc + result) r1
+playntimes :: (String -> IO()) ->Int -> IO ()
+playntimes log n = do a <- createarray;
+                      writethevalue a 0 0.5
+                      r <- (randommove (BoardState [] [] 0))
+                      playtime  (BoardState [] [] 0) (nextvalue logs X r a (BoardState [] [] 0)) n 0 r
+                        where
+                          playtime ::  BoardState -> IO (BoardState,IOArray Int Double) -> Int -> Double -> Int -> IO ()
+                          playtime  s ns n acc r
+                            | n == 0 = printf "\nPlayed 100 times %f  %f" acc (acc/100.0)
+                            | n > 0 = do
+                                (boardstate, b) <- ns 
+                                (newa, state, result )<- game logs s  boardstate b; 
+                                log $ printf "Game returns %f\n" result
+                                r1 <- randommove (BoardState [] [] 0)
+                                playtime (BoardState [] [] 0) (nextvalue logs X  r1 newa (BoardState [] [] 0)) (n - 1) (acc + result) r1
   
-main =  do print (magicnumber [6,4,3,1])
-           ReinforcementLearning.playntimes 100 
+main =  do printf "Magic number test %d" (magicnumber [6,4,3,1])
+           ReinforcementLearning.playntimes logs 100 
            display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState [1,2,3] [4,5,6] 1))
            return ()
