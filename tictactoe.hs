@@ -140,18 +140,18 @@ nextvalue log player move a ( BoardState xloc oloc index) =  do
   log $ (show player)
   log $ show (ReinforcementLearning.xloc newstate)
   log $ show (ReinforcementLearning.oloc newstate)
-  log $ printf "Magic number is %d" (magicnumber  (ReinforcementLearning.xloc newstate))
-  log $ printf "Magic number is %d" (magicnumber  (ReinforcementLearning.oloc newstate))
   if (x == 0.0)
-  then if ((magicnumber xloc ) == 15)
+  then if ((magicnumber (ReinforcementLearning.xloc newstate)) == 15)
        then do
             (writethevalue a (ReinforcementLearning.index newstate) 0)
+            log $ printf "Magic number is %d" (magicnumber  (ReinforcementLearning.xloc newstate))
             return (newstate,a)
-       else if ((magicnumber oloc ) == 15)
+       else if ((magicnumber (ReinforcementLearning.oloc newstate)) == 15)
             then do
                  (writethevalue a  (ReinforcementLearning.index newstate) 1)
+                 log $ printf "Magic number is %d" (magicnumber  (ReinforcementLearning.oloc newstate))
                  return (newstate,a)
-            else if ((length oloc )+(length xloc) == 9)
+            else if ((length (ReinforcementLearning.oloc newstate))+(length (ReinforcementLearning.xloc newstate)) == 9)
             then do
                  (writethevalue a  (ReinforcementLearning.index newstate) 0)
                  return (newstate,a)
@@ -169,7 +169,6 @@ possiblemoves (BoardState xloc oloc index) =
 debug :: IO Int -> IO Int
 debug value = do
   x <- value
-  printf "Random move to [%d]\n" x
   return x
 
 --   "Returns one of the unplayed locations, selected at random"
@@ -290,7 +289,7 @@ playntimes n = do a <- createarray;
                             -- playtime state (nextvalue logs X  r1 newa state) (n - 1) (acc + result) r1
                             playtime (BoardState [] [] 0) (nextvalue logs X  r1 newa (BoardState [] [] 0)) (n - 1) (acc + result) r1
   
-main =  do print (magicnumber [0,0,0,8,9,7,2,5,1,6,3,4])
-           ReinforcementLearning.playntimes 10 
+main =  do print (magicnumber [6,4,3,1])
+           ReinforcementLearning.playntimes 100 
            display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState [1,2,3] [4,5,6] 1))
            return ()
