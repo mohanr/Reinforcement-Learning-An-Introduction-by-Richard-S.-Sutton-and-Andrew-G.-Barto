@@ -102,6 +102,9 @@ writetoarray = do { a <- createarray; liftIO (runReaderT (writevalue 1 2) a) }
 logs      ::  String -> IO ()
 logs  message = withFile "D:/Git/game.log" AppendMode (\ fd -> hPrint fd message )
 
+logsresult      ::  String -> IO ()
+logsresult  message = withFile "D:/Git/learning.log" AppendMode (\ fd -> hPrint fd message )
+
 showstate :: BoardState -> IO ()
 showstate (BoardState xloc oloc index) = display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState xloc oloc index) )
 
@@ -283,7 +286,7 @@ playntimes log n = do a <- createarray;
                         where
                           playtime ::  BoardState -> IO (BoardState,IOArray Int Double) -> Int -> Double -> Int -> IO ()
                           playtime  s ns n acc r
-                            | n == 0 = printf "\nPlayed 100 times %f  %f"  acc (acc/100.0)
+                            | n == 0 = logsresult $ printf "Played 100 times %f  %f"  acc (acc/100.0)
                             | n > 0 = do
                                 (boardstate, b) <- ns 
                                 (newa, state, result )<- game logs s  boardstate b; 
@@ -307,23 +310,24 @@ playrepeatedly numruns numbins binsize = do
   loop arr  numruns numbins binsize
     where
       loop arr nr nb bs
-        | nb == 0 = loop1 numruns numbins binsize 
+        | nb == 0 = let x = numruns
+                        y = numbins
+                        z = binsize in
+                      loop1 x y z 
         | nb > 0 = do
             v <- readthevalue arr nr
             writethevalue arr nb (v+1)
-            printf "Playing with binsize %d" bs
             playntimes logs bs;
             loop arr (nb-1) nr bs
         where
-        loop1 numruns1 numbins1 binsize1 
-          | numbins1 == 0 = print "Finished"
-          | numbins1> 0 = do
-            fv <- readthevalue arr numbins1
-            printf "Runs %f\n" (fv / fromIntegral( binsize1 * numruns1))
-            loop1 numruns1 (numbins1-1)  binsize1   
+        loop1 x y z 
+          | y == 0 = print "Finished"
+          | y > 0 = do
+            fv <- readthevalue arr y
+            printf " Runs %f\n" (fv / fromIntegral( z * y))
+            loop1 x (y-1)  z
 
-main =  do printf "Magic number test %d" (magicnumber [6,4,3,1])
-           -- ReinforcementLearning.playagainntimes 40
-           ReinforcementLearning.playrepeatedly 1 1 10
+main =  do -- ReinforcementLearning.playagainntimes 40
+           ReinforcementLearning.playrepeatedly 10 40 100
            display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState [1,2,3] [4,5,6] 1))
            return ()
