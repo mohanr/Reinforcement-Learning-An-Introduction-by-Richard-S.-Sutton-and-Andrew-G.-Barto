@@ -248,20 +248,23 @@ gameplan log a state newstate = do
         valueofnewstate <-  catch (readthevalue c (ReinforcementLearning.index newstate)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index newstate)]>> throwIO e)
         if (gm == 0)
           then do
-            return(c,newstate,valueofnewstate)
+          (nv,d) <- nextvalue logs O (randomgreedy log r1 rm gm) c newstate
+          d' <- if r1 < 0.01 then return d else update d state nv
+          valueofnewstate1 <-  catch (readthevalue d' (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
+          return(d',nv,valueofnewstate1)
           else do
-            (nv,d) <- nextvalue logs O (randomgreedy log r1 rm gm) c newstate
-            d' <- if r1 < 0.01 then return d else update d state nv
-            result1 <- (terminalstatep log d' (ReinforcementLearning.index nv));
-            valueofnewstate1 <-  catch (readthevalue d' (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
-            if result1
-              then do
-              log $ printf "Gameplan returns(False branch) %f\n " valueofnewstate1
-              return (d',nv,valueofnewstate1)
-              else do
-              r <- randommove newstate
-              (nv1,d1') <- nextvalue logs X r d' newstate
-              gameplan log d1' newstate (nv1)
+          (nv,d) <- nextvalue logs O (randomgreedy log r1 rm gm) c newstate
+          d' <- if r1 < 0.01 then return d else update d state nv
+          result1 <- (terminalstatep log d' (ReinforcementLearning.index nv));
+          valueofnewstate1 <-  catch (readthevalue d' (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
+          if result1
+            then do
+            log $ printf "Gameplan returns(False branch) %f\n " valueofnewstate1
+            return (d',nv,valueofnewstate1)
+            else do
+            r <- randommove newstate
+            (nv1,d1') <- nextvalue logs X r d' newstate
+            gameplan log d1' newstate (nv1)
   
 
 --   "Plays 1 game against the random player. Also learns and prints.
@@ -280,7 +283,7 @@ playntimes log n = do a <- createarray;
                         where
                           playtime ::  BoardState -> IO (BoardState,IOArray Int Double) -> Int -> Double -> Int -> IO ()
                           playtime  s ns n acc r
-                            | n == 0 = printf "\nPlayed 100 times %f  %f" acc (acc/100.0)
+                            | n == 0 = printf "\nPlayed 100 times %f  %f"  acc (acc/100.0)
                             | n > 0 = do
                                 (boardstate, b) <- ns 
                                 (newa, state, result )<- game logs s  boardstate b; 
@@ -297,8 +300,27 @@ playagainntimes n = playtimes n
                               playntimes logs 100
                               playtimes (n -1)
 
+playrepeatedly :: Int -> Int -> Int -> IO()
+playrepeatedly numruns numbins binsize = do 
+  arr <- newArray (0,numbins) 0;
+  loop arr numruns binsize
+    where
+      loop arr nr bs
+        | nr == 0 = loop1 numbins binsize numruns
+        | nr > 0 = do
+            v <- readthevalue arr nr
+            writethevalue arr nr (v+1)
+            playntimes logs binsize
+            loop arr nr bs
+        where
+        loop1 numbins binsize numruns
+          | numbins == 0 = print "Finished"
+          | numbins> 0 = do
+            fv <- readthevalue arr numruns
+            printf "Runs %d\n" (fv / fromIntegral( binsize * numruns))
+            loop1 (numbins-1)  binsize numruns  
 
 main =  do printf "Magic number test %d" (magicnumber [6,4,3,1])
-           ReinforcementLearning.playagainntimes 40 
+           ReinforcementLearning.playagainntimes 40
            display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState [1,2,3] [4,5,6] 1))
            return ()
