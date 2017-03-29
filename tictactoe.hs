@@ -290,6 +290,7 @@ playntimes log n = do a <- createarray;
                                 log $ printf "Game returns %f\n" result
                                 r1 <- randommove (BoardState [] [] 0)
                                 playtime (BoardState [] [] 0) (nextvalue logs X  r1 newa (BoardState [] [] 0)) (n - 1) (acc + result) r1
+                                -- playtime state (nextvalue logs X  r1 newa state) (n - 1) (acc + result) r1
   
 playagainntimes :: Int -> IO()
 playagainntimes n = playtimes n
@@ -303,24 +304,26 @@ playagainntimes n = playtimes n
 playrepeatedly :: Int -> Int -> Int -> IO()
 playrepeatedly numruns numbins binsize = do 
   arr <- newArray (0,numbins) 0;
-  loop arr numruns binsize
+  loop arr  numruns numbins binsize
     where
-      loop arr nr bs
-        | nr == 0 = loop1 numbins binsize numruns
-        | nr > 0 = do
+      loop arr nr nb bs
+        | nb == 0 = loop1 numruns numbins binsize 
+        | nb > 0 = do
             v <- readthevalue arr nr
-            writethevalue arr nr (v+1)
-            playntimes logs binsize
-            loop arr nr bs
+            writethevalue arr nb (v+1)
+            printf "Playing with binsize %d" bs
+            playntimes logs bs;
+            loop arr (nb-1) nr bs
         where
-        loop1 numbins binsize numruns
-          | numbins == 0 = print "Finished"
-          | numbins> 0 = do
-            fv <- readthevalue arr numruns
-            printf "Runs %d\n" (fv / fromIntegral( binsize * numruns))
-            loop1 (numbins-1)  binsize numruns  
+        loop1 numruns1 numbins1 binsize1 
+          | numbins1 == 0 = print "Finished"
+          | numbins1> 0 = do
+            fv <- readthevalue arr numbins1
+            printf "Runs %f\n" (fv / fromIntegral( binsize1 * numruns1))
+            loop1 numruns1 (numbins1-1)  binsize1   
 
 main =  do printf "Magic number test %d" (magicnumber [6,4,3,1])
-           ReinforcementLearning.playagainntimes 40
+           -- ReinforcementLearning.playagainntimes 40
+           ReinforcementLearning.playrepeatedly 1 1 10
            display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState [1,2,3] [4,5,6] 1))
            return ()
