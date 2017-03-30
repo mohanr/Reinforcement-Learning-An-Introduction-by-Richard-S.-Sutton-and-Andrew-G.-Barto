@@ -295,39 +295,37 @@ playntimes log n = do a <- createarray;
                                 playtime (BoardState [] [] 0) (nextvalue logs X  r1 newa (BoardState [] [] 0)) (n - 1) (acc + result) r1
                                 -- playtime state (nextvalue logs X  r1 newa state) (n - 1) (acc + result) r1
   
-playagainntimes :: Int -> IO()
-playagainntimes n = playtimes n
-                      where
-                        playtimes n
-                          | n == 0 = printf "\nPlayed 40 times"
-                          | n > 0 = do
-                              playntimes logs 100
-                              playtimes (n -1)
+numruns :: Int -> Int -> Int -> IO()
+numruns n bins binsize  
+  | n == 0 = printf "\nPlayed numruns times"
+  | n > 0 = do
+      playrepeatedly n bins binsize
+      numruns (n -1) bins binsize
 
-playrepeatedly :: Int -> Int -> Int -> IO()
+playrepeatedly ::  Int -> Int -> Int -> IO()
 playrepeatedly numruns numbins binsize = do 
   arr <- newArray (0,numbins) 0;
-  loop arr  numruns numbins binsize
+  loop arr 0 binsize
     where
-      loop arr nr nb bs
-        | nb == 0 = let x = numruns
-                        y = numbins
-                        z = binsize in
-                      loop1 x y z 
-        | nb > 0 = do
-            v <- readthevalue arr nr
-            writethevalue arr nb (v+1)
+      loop arr i bs
+        | i == numbins = let x = numruns
+                             y = numbins
+                             z = binsize in
+                           loop1 arr x 0 z 
+        | i < numbins = do
+            v <- readthevalue arr i 
+            writethevalue arr i (v+1)
             playntimes logs bs;
-            loop arr (nb-1) nr bs
+            loop arr (i+1) bs
         where
-        loop1 x y z 
-          | y == 0 = print "Finished"
-          | y > 0 = do
-            fv <- readthevalue arr y
-            printf " Runs %f\n" (fv / fromIntegral( z * y))
-            loop1 x (y-1)  z
+        loop1 arr x j z 
+          | j == z = print "Finished"
+          | j < (z-1) = do
+              fv <- readthevalue arr j
+              printf " Runs %f Final Value %f Binsize %d Numruns %d \n" (fv / fromIntegral( z * x)) fv z x
+              loop1 arr x (j+1)  z
 
 main =  do -- ReinforcementLearning.playagainntimes 40
-           ReinforcementLearning.playrepeatedly 10 40 100
+           ReinforcementLearning.numruns 1 1 100
            display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState [1,2,3] [4,5,6] 1))
            return ()
