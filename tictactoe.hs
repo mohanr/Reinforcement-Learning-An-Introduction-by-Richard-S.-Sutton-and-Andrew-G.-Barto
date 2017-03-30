@@ -105,6 +105,9 @@ logs  message = withFile "D:/Git/game.log" AppendMode (\ fd -> hPrint fd message
 logsresult      ::  String -> IO ()
 logsresult  message = withFile "D:/Git/learning.log" AppendMode (\ fd -> hPrint fd message )
 
+playero ::  String -> IO ()
+playero message = withFile "D:/Git/playero.log" AppendMode (\ fd -> hPrint fd message )
+  
 showstate :: BoardState -> IO ()
 showstate (BoardState xloc oloc index) = display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState xloc oloc index) )
 
@@ -152,7 +155,7 @@ nextvalue log player move a ( BoardState xloc oloc index) =  do
        else if ((magicnumber (ReinforcementLearning.oloc newstate)) == 15)
             then do
                  (writethevalue a  (ReinforcementLearning.index newstate) 1)
-                 log $ printf "Magic number is %d. Player O wins" (magicnumber  (ReinforcementLearning.oloc newstate))
+                 playero $ printf "Magic number is %d. Player O wins" (magicnumber  (ReinforcementLearning.oloc newstate))
                  return (newstate,a)
             else if ((length (ReinforcementLearning.oloc newstate))+(length (ReinforcementLearning.xloc newstate)) == 9)
             then do
@@ -278,55 +281,57 @@ game log state newstate a  = do
   (newa, state, result )<-  gameplan log a state newstate
   return (newa, state, result )
    
-playntimes :: (String -> IO()) ->Int -> IO ()
-playntimes log n = do a <- createarray;
-                      writethevalue a 0 0.5
-                      r <- (randommove (BoardState [] [] 0))
-                      playtime  (BoardState [] [] 0) (nextvalue logs X r a (BoardState [] [] 0)) n 0 r
-                        where
-                          playtime ::  BoardState -> IO (BoardState,IOArray Int Double) -> Int -> Double -> Int -> IO ()
-                          playtime  s ns n acc r
-                            | n == 0 = logsresult $ printf "Played 100 times %f  %f"  acc (acc/100.0)
-                            | n > 0 = do
-                                (boardstate, b) <- ns 
-                                (newa, state, result )<- game logs s  boardstate b; 
-                                log $ printf "Game returns %f\n" result
-                                r1 <- randommove (BoardState [] [] 0)
-                                playtime (BoardState [] [] 0) (nextvalue logs X  r1 newa (BoardState [] [] 0)) (n - 1) (acc + result) r1
-                                -- playtime state (nextvalue logs X  r1 newa state) (n - 1) (acc + result) r1
+playntimes :: IOArray Int Double -> (String -> IO()) ->Int -> IO (IOArray Int Double)
+-- playntimes log n = do a <- createarray;
+playntimes a log n = do writethevalue a 0 0.5
+                        r <- (randommove (BoardState [] [] 0))
+                        playtime  a (BoardState [] [] 0) (nextvalue logs X r a (BoardState [] [] 0)) n 0 r
+                          where
+                            playtime :: IOArray Int Double -> BoardState -> IO (BoardState,IOArray Int Double) -> Int -> Double -> Int -> IO (IOArray Int Double)
+                            playtime newa s ns n acc r
+                              | n == 0 = do logsresult $ printf "Played 100 times %f  %f"  acc (acc/100.0)
+                                            return newa
+                              | n > 0 = do
+                                  (boardstate, b) <- ns 
+                                  (newa, state, result )<- game logs s  boardstate b; 
+                                  log $ printf "Game returns %f\n" result
+                                  r1 <- randommove (BoardState [] [] 0)
+                                  playtime newa (BoardState [] [] 0) (nextvalue logs X  r1 newa (BoardState [] [] 0)) (n - 1) (acc + result) r1
   
-numruns :: Int -> Int -> Int -> IO()
-numruns n bins binsize  
+numruns :: IOArray Int Double ->Int -> Int -> Int -> IO()
+numruns a n bins binsize  
   | n == 0 = printf "\nPlayed numruns times"
   | n > 0 = do
       arr <- newArray (0,bins) 0;
-      playrepeatedly arr n bins binsize
-      numruns (n -1) bins binsize
+      b <- playrepeatedly a arr n bins binsize
+      numruns b (n -1) bins binsize
 
-playrepeatedly ::  IOArray Int Double -> Int -> Int -> Int -> IO()
-playrepeatedly arr numrun numbins binsize = do 
- loop arr 0 binsize
+playrepeatedly ::  IOArray Int Double ->IOArray Int Double -> Int -> Int -> Int -> IO(IOArray Int Double)
+playrepeatedly a arr numrun numbins binsize = do 
+ loop a arr 0 binsize
     where
-      loop arr i bs
+      loop a arr i bs
         | i == numbins = let x = numrun
                              y = numbins
                              z = binsize in
-                           loop1 arr x 0 y z 
+                           loop1 a arr x 0 y z 
         | i < numbins = do
             v <- readthevalue arr i 
             writethevalue arr i (v+1)
-            playntimes logs bs;
-            loop arr (i+1) bs
+            b <- playntimes a logs bs;
+            loop b arr (i+1) bs
         where 
-        loop1 arr x j y z = if j < y
-                            then do
-                            fv <- readthevalue arr j
-                            printf " Runs %f Final Value %f Binsize %d Numruns %d \n" (fv / fromIntegral( z * x)) fv z x
-                            loop1 arr x (j+1) y z
-                            else
-                            print "Finished"
+        loop1 a arr x j y z = if j < y
+                              then do
+                              fv <- readthevalue arr j
+                              printf " Runs %f Final Value %f Binsize %d Numruns %d \n" (fv / fromIntegral( z * x)) fv z x
+                              loop1 a arr x (j+1) y z
+                              else
+                              return a
 
-main =  do -- ReinforcementLearning.playagainntimes 40
-           ReinforcementLearning.numruns 2 2 100
-           display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState [1,2,3] [4,5,6] 1))
-           return ()
+
+main =  do
+   p <- createarray
+   ReinforcementLearning.numruns p 100 40 100
+   display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState [1,2,3] [4,5,6] 1))
+   return ()
