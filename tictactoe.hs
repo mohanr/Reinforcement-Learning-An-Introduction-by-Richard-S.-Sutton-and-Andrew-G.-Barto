@@ -299,33 +299,34 @@ numruns :: Int -> Int -> Int -> IO()
 numruns n bins binsize  
   | n == 0 = printf "\nPlayed numruns times"
   | n > 0 = do
-      playrepeatedly n bins binsize
+      arr <- newArray (0,bins) 0;
+      playrepeatedly arr n bins binsize
       numruns (n -1) bins binsize
 
-playrepeatedly ::  Int -> Int -> Int -> IO()
-playrepeatedly numruns numbins binsize = do 
-  arr <- newArray (0,numbins) 0;
-  loop arr 0 binsize
+playrepeatedly ::  IOArray Int Double -> Int -> Int -> Int -> IO()
+playrepeatedly arr numrun numbins binsize = do 
+ loop arr 0 binsize
     where
       loop arr i bs
-        | i == numbins = let x = numruns
+        | i == numbins = let x = numrun
                              y = numbins
                              z = binsize in
-                           loop1 arr x 0 z 
+                           loop1 arr x 0 y z 
         | i < numbins = do
             v <- readthevalue arr i 
             writethevalue arr i (v+1)
             playntimes logs bs;
             loop arr (i+1) bs
-        where
-        loop1 arr x j z 
-          | j == z = print "Finished"
-          | j < (z-1) = do
-              fv <- readthevalue arr j
-              printf " Runs %f Final Value %f Binsize %d Numruns %d \n" (fv / fromIntegral( z * x)) fv z x
-              loop1 arr x (j+1)  z
+        where 
+        loop1 arr x j y z = if j < y
+                            then do
+                            fv <- readthevalue arr j
+                            printf " Runs %f Final Value %f Binsize %d Numruns %d \n" (fv / fromIntegral( z * x)) fv z x
+                            loop1 arr x (j+1) y z
+                            else
+                            print "Finished"
 
 main =  do -- ReinforcementLearning.playagainntimes 40
-           ReinforcementLearning.numruns 1 1 100
+           ReinforcementLearning.numruns 2 2 100
            display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState [1,2,3] [4,5,6] 1))
            return ()
