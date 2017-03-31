@@ -253,26 +253,25 @@ gameplan log a state newstate = do
         (gm,c) <- greedymove log a O newstate
         log $ printf "Greedy Move is %d \n " gm
         valueofnewstate <-  catch (readthevalue c (ReinforcementLearning.index newstate)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index newstate)]>> throwIO e)
-        if (gm == 0)
-          then do
-          -- (nv,d) <- nextvalue logs O (randomgreedy log r1 rm gm) c newstate
-          -- d' <- if r1 < 0.01 then return d else update d state nv
-          -- valueofnewstate1 <-  catch (readthevalue d' (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
-          -- return(d',nv,valueofnewstate1)
-          return(c,newstate,valueofnewstate)
-          else do
-          (nv,d) <- nextvalue logs O (randomgreedy log r1 rm gm) c newstate
-          d' <- if r1 < 0.01 then return d else update d state nv
-          result1 <- (terminalstatep log d' (ReinforcementLearning.index nv));
-          valueofnewstate1 <-  catch (readthevalue d' (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
-          if result1
-            then do
-            log $ printf "Gameplan returns(False branch) %f\n " valueofnewstate1
-            return (d',nv,valueofnewstate1)
-            else do
-            r <- randommove newstate
-            (nv1,d1') <- nextvalue logs X r d' newstate
-            gameplan log d1' newstate (nv1)
+        -- if (gm == 0)
+        --   then do
+        --   return(c,newstate,valueofnewstate)
+        --   else do
+        (nv,d) <- nextvalue logs O (randomgreedy log r1 rm gm) c newstate
+        d' <- if r1 < 0.01 then return d else update d state nv
+        result1 <- (terminalstatep log d' (ReinforcementLearning.index nv));
+        valueofnewstate1 <-  catch (readthevalue d' (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
+        if (length (possiblemoves nv) == 0)
+          then
+          return (d',nv,valueofnewstate1)
+          else if result1
+               then do
+               log $ printf "Gameplan returns(False branch) %f\n " valueofnewstate1
+               return (d',nv,valueofnewstate1)
+               else do
+               r <- randommove newstate
+               (nv1,d1') <- nextvalue logs X r d' newstate
+               gameplan log d1' newstate (nv1)
   
 
 --   "Plays 1 game against the random player. Also learns and prints.
