@@ -332,6 +332,5 @@ playrepeatedly a arr numrun numbins binsize = do
 
 main =  do
    p <- createarray
-   ReinforcementLearning.numruns p 100 40 100
-   display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState [1,2,3] [4,5,6] 1))
+   ReinforcementLearning.numruns p 1 1 100
    return ()
