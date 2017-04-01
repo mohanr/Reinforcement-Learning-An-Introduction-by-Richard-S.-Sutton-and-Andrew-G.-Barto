@@ -69,7 +69,7 @@ powersof2  =  [ 2 ^ i | i <- [0..8]]
 
 createarray :: IO ( IOArray Int Double)
 createarray =  do {
-                       arr <- newArray (0,512*512) 0;
+                       arr <- newArray (0,512*512) (-1.0);
                        return arr
                   }
 
@@ -100,13 +100,13 @@ readfromarray = do { a <- createarray; liftIO (runReaderT (readvalue 1) a) }
 writetoarray = do { a <- createarray; liftIO (runReaderT (writevalue 1 2) a) }
 
 logs      ::  String -> IO ()
-logs  message = withFile "D:/Git/game.log" AppendMode (\ fd -> hPrint fd message )
+logs  message = withFile "c:/Git/game.log" AppendMode (\ fd -> hPrint fd message )
 
 logsresult      ::  String -> IO ()
-logsresult  message = withFile "D:/Git/learning.log" AppendMode (\ fd -> hPrint fd message )
+logsresult  message = withFile "c:/Git/learning.log" AppendMode (\ fd -> hPrint fd message )
 
 playero ::  String -> IO ()
-playero message = withFile "D:/Git/playero.log" AppendMode (\ fd -> hPrint fd message )
+playero message = withFile "c:/Git/playero.log" AppendMode (\ fd -> hPrint fd message )
   
 showstate :: BoardState -> IO ()
 showstate (BoardState xloc oloc index) = display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState xloc oloc index) )
@@ -146,7 +146,7 @@ nextvalue log player move a ( BoardState xloc oloc index) =  do
   log $ (show player)
   log $ show (ReinforcementLearning.xloc newstate)
   log $ show (ReinforcementLearning.oloc newstate)
-  if (x == 0.0)
+  if (x == -1.0)
   then if ((magicnumber (ReinforcementLearning.xloc newstate)) == 15)
        then do
             (writethevalue a (ReinforcementLearning.index newstate) 0)
@@ -159,6 +159,7 @@ nextvalue log player move a ( BoardState xloc oloc index) =  do
                  return (newstate,a)
             else if ((length (ReinforcementLearning.oloc newstate))+(length (ReinforcementLearning.xloc newstate)) == 9)
             then do
+                 playero $ printf "Sume of Length of states is 9"
                  (writethevalue a  (ReinforcementLearning.index newstate) 0)
                  return (newstate,a)
             else do
@@ -252,25 +253,25 @@ gameplan log a state newstate = do
         (gm,c) <- greedymove log a O newstate
         log $ printf "Greedy Move is %d \n " gm
         valueofnewstate <-  catch (readthevalue c (ReinforcementLearning.index newstate)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index newstate)]>> throwIO e)
-        if (gm == 0)
-          then do
-          (nv,d) <- nextvalue logs O (randomgreedy log r1 rm gm) c newstate
-          d' <- if r1 < 0.01 then return d else update d state nv
-          valueofnewstate1 <-  catch (readthevalue d' (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
-          return(d',nv,valueofnewstate1)
-          else do
-          (nv,d) <- nextvalue logs O (randomgreedy log r1 rm gm) c newstate
-          d' <- if r1 < 0.01 then return d else update d state nv
-          result1 <- (terminalstatep log d' (ReinforcementLearning.index nv));
-          valueofnewstate1 <-  catch (readthevalue d' (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
-          if result1
-            then do
-            log $ printf "Gameplan returns(False branch) %f\n " valueofnewstate1
-            return (d',nv,valueofnewstate1)
-            else do
-            r <- randommove newstate
-            (nv1,d1') <- nextvalue logs X r d' newstate
-            gameplan log d1' newstate (nv1)
+        -- if (gm == 0)
+        --   then do
+        --   return(c,newstate,valueofnewstate)
+        --   else do
+        (nv,d) <- nextvalue logs O (randomgreedy log r1 rm gm) c newstate
+        d' <- if r1 < 0.01 then return d else update d state nv
+        result1 <- (terminalstatep log d' (ReinforcementLearning.index nv));
+        valueofnewstate1 <-  catch (readthevalue d' (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
+        if (length (possiblemoves nv) == 0)
+          then
+          return (d',nv,valueofnewstate1)
+          else if result1
+               then do
+               log $ printf "Gameplan returns(False branch) %f\n " valueofnewstate1
+               return (d',nv,valueofnewstate1)
+               else do
+               r <- randommove newstate
+               (nv1,d1') <- nextvalue logs X r d' newstate
+               gameplan log d1' newstate (nv1)
   
 
 --   "Plays 1 game against the random player. Also learns and prints.
@@ -308,24 +309,24 @@ numruns a n bins binsize
 
 playrepeatedly ::  IOArray Int Double ->IOArray Int Double -> Int -> Int -> Int -> IO(IOArray Int Double)
 playrepeatedly a arr numrun numbins binsize = do 
- loop a arr 0 binsize
+ loop a 0 binsize
     where
-      loop a arr i bs
+      loop a i bs
         | i == numbins = let x = numrun
                              y = numbins
                              z = binsize in
-                           loop1 a arr x 0 y z 
+                           loop1 a x 0 y z 
         | i < numbins = do
             v <- readthevalue arr i 
             writethevalue arr i (v+1)
             b <- playntimes a logs bs;
-            loop b arr (i+1) bs
+            loop b (i+1) bs
         where 
-        loop1 a arr x j y z = if j < y
+        loop1 a x j y z = if j < y
                               then do
                               fv <- readthevalue arr j
                               printf " Runs %f Final Value %f Binsize %d Numruns %d \n" (fv / fromIntegral( z * x)) fv z x
-                              loop1 a arr x (j+1) y z
+                              loop1 a x (j+1) y z
                               else
                               return a
 
