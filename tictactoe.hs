@@ -100,13 +100,13 @@ readfromarray = do { a <- createarray; liftIO (runReaderT (readvalue 1) a) }
 writetoarray = do { a <- createarray; liftIO (runReaderT (writevalue 1 2) a) }
 
 logs      ::  String -> IO ()
-logs  message = withFile "c:/Git/game.log" AppendMode (\ fd -> hPrint fd message )
+logs  message = withFile "d:/Git/game.log" AppendMode (\ fd -> hPrint fd message )
 
 logsresult      ::  String -> IO ()
-logsresult  message = withFile "c:/Git/learning.log" AppendMode (\ fd -> hPrint fd message )
+logsresult  message = withFile "d:/Git/learning.log" AppendMode (\ fd -> hPrint fd message )
 
 playero ::  String -> IO ()
-playero message = withFile "c:/Git/playero.log" AppendMode (\ fd -> hPrint fd message )
+playero message = withFile "d:/Git/playero.log" AppendMode (\ fd -> hPrint fd message )
   
 showstate :: BoardState -> IO ()
 showstate (BoardState xloc oloc index) = display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState xloc oloc index) )
@@ -282,16 +282,16 @@ game log state newstate a  = do
   (newa, state, result )<-  gameplan log a state newstate
   return (newa, state, result )
    
-playntimes :: IOArray Int Double -> (String -> IO()) ->Int -> IO (IOArray Int Double)
+playntimes :: IOArray Int Double -> (String -> IO()) ->Int -> IO (IOArray Int Double,Double)
 -- playntimes log n = do a <- createarray;
 playntimes a log n = do writethevalue a 0 0.5
                         r <- (randommove (BoardState [] [] 0))
                         playtime  a (BoardState [] [] 0) (nextvalue logs X r a (BoardState [] [] 0)) n 0 r
                           where
-                            playtime :: IOArray Int Double -> BoardState -> IO (BoardState,IOArray Int Double) -> Int -> Double -> Int -> IO (IOArray Int Double)
+                            playtime :: IOArray Int Double -> BoardState -> IO (BoardState,IOArray Int Double) -> Int -> Double -> Int -> IO (IOArray Int Double,Double)
                             playtime newa s ns n acc r
                               | n == 0 = do logsresult $ printf "Played 100 times %f  %f"  acc (acc/100.0)
-                                            return newa
+                                            return (newa,acc)
                               | n > 0 = do
                                   (boardstate, b) <- ns 
                                   (newa, state, result )<- game logs s  boardstate b; 
@@ -318,8 +318,8 @@ playrepeatedly a arr numrun numbins binsize = do
                            loop1 a x 0 y z 
         | i < numbins = do
             v <- readthevalue arr i 
-            writethevalue arr i (v+1)
-            b <- playntimes a logs bs;
+            (b,acc) <- playntimes a logs bs;
+            writethevalue arr i acc 
             loop b (i+1) bs
         where 
         loop1 a x j y z = if j < y
@@ -333,5 +333,5 @@ playrepeatedly a arr numrun numbins binsize = do
 
 main =  do
    p <- createarray
-   ReinforcementLearning.numruns p 1 1 100
+   ReinforcementLearning.numruns p 5 1 100
    return ()
