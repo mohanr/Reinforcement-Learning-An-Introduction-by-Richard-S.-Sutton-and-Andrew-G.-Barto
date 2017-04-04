@@ -285,15 +285,15 @@ playntimes a log n = do writethevalue a 0 0.5
                         playtime  a (BoardState [] [] 0) (nextvalue logs X r a (BoardState [] [] 0)) n 0 r
                           where
                             playtime :: IOArray Int Double -> BoardState -> IO (BoardState,IOArray Int Double) -> Int -> Double -> Int -> IO (IOArray Int Double,Double)
-                            playtime newa s ns n acc r
+                            playtime finala s ns n acc r --finala is the consolidation for the next run
                               | n == 0 = do logsresult $ printf "Played 100 times %f  %f"  acc (acc/100.0)
-                                            return (newa,acc)
+                                            return (finala,acc)
                               | n > 0 = do
                                   (boardstate, b) <- ns 
-                                  (newa, state, result )<- game logs s  boardstate b; 
+                                  (updatedarray, _, result) <- game logs s  boardstate b; 
                                   log $ printf "Game returns %f\n" result
                                   r1 <- randommove (BoardState [] [] 0)
-                                  playtime newa (BoardState [] [] 0) (nextvalue logs X  r1 newa (BoardState [] [] 0)) (n - 1) (acc + result) r1
+                                  playtime updatedarray (BoardState [] [] 0) (nextvalue logs X  r1 updatedarray (BoardState [] [] 0)) (n - 1) (acc + result) r1
   
 numruns :: IOArray Int Double ->Int -> Int -> Int -> IO()
 numruns a n bins binsize  
