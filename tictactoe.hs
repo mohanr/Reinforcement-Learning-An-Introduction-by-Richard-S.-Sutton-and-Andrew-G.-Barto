@@ -142,20 +142,20 @@ nextvalue :: (String -> IO()) -> Player -> Int -> ( IOArray Int Double) -> Board
 nextvalue log player move a ( BoardState xloc oloc index) =  do
   let newstate = (nextstate player ( BoardState xloc oloc index) move)
   x <- catch (readthevalue a (ReinforcementLearning.index newstate))(\(SomeException e) -> printf "Reading [%d} in Next value" index >> print e >> throwIO e)
-  log $ printf "Move is [%d] Value from value table is %f" move x
-  log $ (show player)
-  log $ show (ReinforcementLearning.xloc newstate)
-  log $ show (ReinforcementLearning.oloc newstate)
+  -- log $ printf "Move is [%d] Value from value table is %f" move x
+  -- log $ (show player)
   if (x == -1.0)
   then if ((magicnumber (ReinforcementLearning.xloc newstate)) == 15)
        then do
             (writethevalue a (ReinforcementLearning.index newstate) 0)
             log $ printf "Magic number is %d. Player X wins" (magicnumber  (ReinforcementLearning.xloc newstate))
+            log $ show (ReinforcementLearning.xloc newstate)
             return (newstate,a)
        else if ((magicnumber (ReinforcementLearning.oloc newstate)) == 15)
             then do
                  (writethevalue a  (ReinforcementLearning.index newstate) 1)
                  playero $ printf "Magic number is %d. Player O wins" (magicnumber  (ReinforcementLearning.oloc newstate))
+                 playero $ show (ReinforcementLearning.oloc newstate)
                  return (newstate,a)
             else if ((length (ReinforcementLearning.oloc newstate))+(length (ReinforcementLearning.xloc newstate)) == 9)
             then do
@@ -208,7 +208,7 @@ terminalstatep log a x = do
   y <-  catch ( readthevalue a x) (\(SomeException e) ->  print e >> printf "Read in terminalstep throws exception" >> throwIO e)
   let result = (y == fromIntegral( round y))
   do {
-    log $ printf "Terminal Step - Value is %f" y;
+    -- log $ printf "Terminal Step - Value is %f" y;
     return result
     }
   
@@ -256,7 +256,6 @@ gameplanrevised log a state newstate = do
                                           True -> do
                                             b <- update a state newstate
                                             valueofnewstate <- catch (readthevalue b (ReinforcementLearning.index newstate)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index newstate)]>> throwIO e)
-                                            log $ printf "Gameplan returns(True branch) %f\n " valueofnewstate
                                             return (b,newstate,valueofnewstate)
                                           False -> do
                                             rm <- randommove newstate
@@ -272,7 +271,6 @@ gameplanrevised log a state newstate = do
                                               return (d',nv,valueofnewstate1)
                                               else if result1
                                                    then do
-                                                   log $ printf "Gameplan returns(False branch) %f\n " valueofnewstate1
                                                    return (d',nv,valueofnewstate1)
                                                    else do
                                                    r <- randommove newstate
