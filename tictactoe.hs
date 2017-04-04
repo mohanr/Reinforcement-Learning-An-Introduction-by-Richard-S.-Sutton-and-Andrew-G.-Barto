@@ -217,7 +217,7 @@ greedymove log a player state =
   let possibles = possiblemoves state in
     case possibles of
       [] -> return (0, a)
-      p  -> let bestvalue = -1.0 in
+      p  -> let bestvalue = -2.0 in-- Since default value in array is -1.0
               let bestmove = 0 in
                 choosebestmove a p bestvalue bestmove
                 where
@@ -253,10 +253,6 @@ gameplan log a state newstate = do
         (gm,c) <- greedymove log a O newstate
         log $ printf "Greedy Move is %d \n " gm
         valueofnewstate <-  catch (readthevalue c (ReinforcementLearning.index newstate)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index newstate)]>> throwIO e)
-        -- if (gm == 0)
-        --   then do
-        --   return(c,newstate,valueofnewstate)
-        --   else do
         (nv,d) <- nextvalue logs O (randomgreedy log r1 rm gm) c newstate
         d' <- if r1 < 0.01 then return d else update d state nv
         result1 <- (terminalstatep log d' (ReinforcementLearning.index nv));
@@ -333,5 +329,5 @@ playrepeatedly a arr numrun numbins binsize = do
 
 main =  do
    p <- createarray
-   ReinforcementLearning.numruns p 5 1 100
+   ReinforcementLearning.numruns p 20 20 100
    return ()
