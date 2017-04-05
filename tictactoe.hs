@@ -100,13 +100,13 @@ readfromarray = do { a <- createarray; liftIO (runReaderT (readvalue 1) a) }
 writetoarray = do { a <- createarray; liftIO (runReaderT (writevalue 1 2) a) }
 
 logs      ::  String -> IO ()
-logs  message = withFile "d:/Git/game.log" AppendMode (\ fd -> hPrint fd message )
+logs  message = withFile "c:/Git/game.log" AppendMode (\ fd -> hPrint fd message )
 
 logsresult      ::  String -> IO ()
-logsresult  message = withFile "d:/Git/learning.log" AppendMode (\ fd -> hPrint fd message )
+logsresult  message = withFile "c:/Git/learning.log" AppendMode (\ fd -> hPrint fd message )
 
 playero ::  String -> IO ()
-playero message = withFile "d:/Git/playero.log" AppendMode (\ fd -> hPrint fd message )
+playero message = withFile "c:/Git/playero.log" AppendMode (\ fd -> hPrint fd message )
   
 showstate :: BoardState -> IO ()
 showstate (BoardState xloc oloc index) = display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState xloc oloc index) )
@@ -280,38 +280,6 @@ gameplanrevised log a state newstate = do
                                       r1 <- randommove newstate
                                       (ns,na) <- nextvalue logs X r1 a newstate
                                       exploremove na ns newstate
--- This function isn't used
-gameplan :: (String -> IO()) ->( IOArray Int Double) -> BoardState -> BoardState -> IO (IOArray Int Double,BoardState,Double) 
-gameplan log a state newstate = do 
-  r1 <- randombetween;
-  initialvalue <- readthevalue  a 0
-  result <- (terminalstatep log a (ReinforcementLearning.index newstate));
-    case result of
-      True -> do
-        b <- update a state newstate
-        valueofnewstate <- catch (readthevalue b (ReinforcementLearning.index newstate)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index newstate)]>> throwIO e)
-        log $ printf "Gameplan returns(True branch) %f\n " valueofnewstate
-        return (b,newstate,valueofnewstate)
-      False -> do
-        rm <- randommove newstate
-        (gm,c) <- greedymove log a O newstate
-        log $ printf "Greedy Move is %d \n " gm
-        valueofnewstate <-  catch (readthevalue c (ReinforcementLearning.index newstate)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index newstate)]>> throwIO e)
-        (nv,d) <- nextvalue logs O (randomgreedy log r1 rm gm) c newstate
-        d' <- if r1 < 0.01 then return d else update d state nv
-        result1 <- (terminalstatep log d' (ReinforcementLearning.index nv));
-        valueofnewstate1 <-  catch (readthevalue d' (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
-        if (length (possiblemoves nv) == 0)
-          then
-          return (d',nv,valueofnewstate1)
-          else if result1
-               then do
-               log $ printf "Gameplan returns(False branch) %f\n " valueofnewstate1
-               return (d',nv,valueofnewstate1)
-               else do
-               r <- randommove newstate
-               (nv1,d1') <- nextvalue logs X r d' newstate
-               gameplan log d1' newstate (nv1)
   
 
 --   "Plays 1 game against the random player. Also learns and prints.
@@ -373,5 +341,5 @@ playrepeatedly a arr numrun numbins binsize = do
 
 main =  do
    p <- createarray
-   ReinforcementLearning.numruns p 2 2 100
+   ReinforcementLearning.numruns p 100 40 100
    return ()
