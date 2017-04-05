@@ -208,8 +208,7 @@ terminalstatep log a x = do
   y <-  catch ( readthevalue a x) (\(SomeException e) ->  print e >> printf "Read in terminalstep throws exception" >> throwIO e)
   let result = (y == fromIntegral( round y))
   do {
-    -- log $ printf "Terminal Step - Value is %f" y;
-    return result
+    if y == (-1.0) then return False else return result --Default in array is not considered in logic
     }
   
 greedymove ::  (String -> IO()) ->( IOArray Int Double) ->Player -> BoardState -> IO (Int,IOArray Int Double)
