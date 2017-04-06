@@ -12,6 +12,8 @@ import System.IO.Error
 import Text.Printf
 import Debug.Trace
 import System.IO
+import Numeric (showHex, showIntAtBase)
+import Data.Char (intToDigit)
 
 fun :: Map.Map String Int
 fun = Map.empty
@@ -73,13 +75,10 @@ createarray =  do {
                        return arr
                   }
 
-addVal :: Int -> [Int] -> [Int]
-addVal i [] = []
-addVal i (x:xs) = x * 512: addVal i xs
 
 stateindex :: [Int] -> [Int] -> Int
-stateindex xloc oloc = sum (map (2^) xloc)
-                       + sum [2^n | n <- (addVal 512 oloc)]
+stateindex xloc oloc = sum [2^(n-1)| n <- xloc]
+                       + 512 * sum [2^(n-1) | n <- oloc]
 
 type ArrayAccess = ReaderT  (IOArray Int Double)  IO 
 type ArrayWriteAccess = ReaderT  (IOArray Int Double)  IO() 
@@ -339,6 +338,8 @@ playrepeatedly a arr numrun numbins binsize = do
 
 
 main =  do
+   printf "%d\n" (stateindex [1,2] [1,2])
+   putStrLn $ showIntAtBase 2 intToDigit  (stateindex [1] [1]) ""
    p <- createarray
    writethevalue p 0 0.5
    ReinforcementLearning.numruns p 1 1 100
