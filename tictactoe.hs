@@ -100,13 +100,13 @@ readfromarray = do { a <- createarray; liftIO (runReaderT (readvalue 1) a) }
 writetoarray = do { a <- createarray; liftIO (runReaderT (writevalue 1 2) a) }
 
 logs      ::  String -> IO ()
-logs  message = withFile "c:/Git/game.log" AppendMode (\ fd -> hPrint fd message )
+logs  message = withFile "d:/Git/game.log" AppendMode (\ fd -> hPrint fd message )
 
 logsresult      ::  String -> IO ()
-logsresult  message = withFile "c:/Git/learning.log" AppendMode (\ fd -> hPrint fd message )
+logsresult  message = withFile "d:/Git/learning.log" AppendMode (\ fd -> hPrint fd message )
 
 playero ::  String -> IO ()
-playero message = withFile "c:/Git/playero.log" AppendMode (\ fd -> hPrint fd message )
+playero message = withFile "d:/Git/playero.log" AppendMode (\ fd -> hPrint fd message )
   
 showstate :: BoardState -> IO ()
 showstate (BoardState xloc oloc index) = display (InWindow "Reinforcement Learning" (530,530) (220,220)) (greyN 0.5)  (drawBoard (BoardState xloc oloc index) )
@@ -340,5 +340,6 @@ playrepeatedly a arr numrun numbins binsize = do
 
 main =  do
    p <- createarray
-   ReinforcementLearning.numruns p 100 40 100
+   writethevalue p 0 0.5
+   ReinforcementLearning.numruns p 1 1 100
    return ()
