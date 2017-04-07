@@ -65,8 +65,6 @@ drawx = color green $ rotate 45 $
 drawo :: Picture
 drawo = color rose $ thickCircle 25 2
 
-powersof2  :: [Int]  
-powersof2  =  [ 2 ^ i | i <- [0..8]]
 
 
 createarray :: IO ( IOArray Int Double)
@@ -338,8 +336,6 @@ playrepeatedly a arr numrun numbins binsize = do
 
 
 main =  do
-   printf "%d\n" (stateindex [1] [1,2])
-   putStrLn $ showIntAtBase 2 intToDigit  (stateindex [1] [1,2]) ""
    p <- createarray
    writethevalue p 0 0.5
    ReinforcementLearning.numruns p 1 1 100
