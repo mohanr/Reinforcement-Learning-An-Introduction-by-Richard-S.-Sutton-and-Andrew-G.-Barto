@@ -338,8 +338,8 @@ playrepeatedly a arr numrun numbins binsize = do
 
 
 main =  do
-   printf "%d\n" (stateindex [1,2] [1,2])
-   putStrLn $ showIntAtBase 2 intToDigit  (stateindex [1] [1]) ""
+   printf "%d\n" (stateindex [1] [1,2])
+   putStrLn $ showIntAtBase 2 intToDigit  (stateindex [1] [1,2]) ""
    p <- createarray
    writethevalue p 0 0.5
    ReinforcementLearning.numruns p 1 1 100
