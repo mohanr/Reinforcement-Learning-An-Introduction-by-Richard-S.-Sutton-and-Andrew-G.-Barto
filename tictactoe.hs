@@ -303,27 +303,29 @@ playntimes a log n = do writethevalue a 0 0.5
                                   r1 <- randommove (BoardState [] [] 0)
                                   playtime updatedarray (BoardState [] [] 0) (nextvalue logs X  r1 updatedarray (BoardState [] [] 0)) (n - 1) (acc + result) r1
   
-numruns :: IOArray Int Double ->Int -> Int -> Int -> IO()
-numruns a n bins binsize  
+numruns :: IOArray Int Double ->Int -> Int -> Int -> Int -> IO()
+numruns arr n1 n bins binsize  
   | n == 0 = printf "\nPlayed numruns times"
   | n > 0 = do
-      arr <- newArray (0,bins) 0;
-      b <- playrepeatedly a arr n bins binsize
-      numruns b (n -1) bins binsize
+      p <- createarray
+      writethevalue p 0 0.5
+      b <- playrepeatedly p arr n1 bins binsize
+      numruns arr n1 (n -1) bins binsize
 
-playrepeatedly ::  IOArray Int Double ->IOArray Int Double -> Int -> Int -> Int -> IO(IOArray Int Double)
-playrepeatedly a arr numrun numbins binsize = do 
+playrepeatedly ::  IOArray Int Double ->IOArray Int Double ->  Int -> Int -> Int -> IO(IOArray Int Double)
+playrepeatedly a arr numrun1  numbins binsize = do 
  loop a 0 binsize
     where
       loop a i bs
-        | i == numbins = let x = numrun
+        | i == numbins = let x = numrun1
                              y = numbins
                              z = binsize in
                            loop1 a x 0 y z 
         | i < numbins = do
-            v <- readthevalue arr i 
             (b,acc) <- playntimes a logs bs;
-            writethevalue arr i acc 
+            lastvalue <- readthevalue arr i
+            printf " Writing lastvalue + accumulator %f + %f \n" lastvalue acc
+            writethevalue arr i (lastvalue + acc) 
             loop b (i+1) bs
         where 
         loop1 a x j y z = if j < y
@@ -336,7 +338,6 @@ playrepeatedly a arr numrun numbins binsize = do
 
 
 main =  do
-   p <- createarray
-   writethevalue p 0 0.5
-   ReinforcementLearning.numruns p 1 1 100
+   arr <- newArray (0,50) 0.0;
+   ReinforcementLearning.numruns arr 100 100 40 100
    return ()
