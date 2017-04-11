@@ -15,6 +15,7 @@ import System.IO
 import Numeric (showHex, showIntAtBase)
 import Data.Char (intToDigit)
 
+-- BEGIN Unused code --
 fun :: Map.Map String Int
 fun = Map.empty
 
@@ -65,7 +66,7 @@ drawx = color green $ rotate 45 $
 drawo :: Picture
 drawo = color rose $ thickCircle 25 2
 
-
+-- END Unused code --
 
 createarray :: IO ( IOArray Int Double)
 createarray =  do {
@@ -337,8 +338,8 @@ playrepeatedly a arr numrun1  numbins binsize = do
                               return a
 
 
-main = let binsize = 1 in 
+main = let numbins = 1 in 
          do
-           arr <- newArray (0,binsize) 0.0;
-           ReinforcementLearning.numruns arr 1 1 binsize 1000
+           arr <- newArray (0,numbins) 0.0;
+           ReinforcementLearning.numruns arr 1 1 numbins 1000 -- numruns numruns numbins binsize
            return ()
