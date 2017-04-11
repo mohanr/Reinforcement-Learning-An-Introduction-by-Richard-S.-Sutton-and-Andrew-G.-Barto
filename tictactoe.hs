@@ -337,7 +337,8 @@ playrepeatedly a arr numrun1  numbins binsize = do
                               return a
 
 
-main =  do
-   arr <- newArray (0,50) 0.0;
-   ReinforcementLearning.numruns arr 100 100 40 100
-   return ()
+main = let binsize = 1 in 
+         do
+           arr <- newArray (0,binsize) 0.0;
+           ReinforcementLearning.numruns arr 1 1 binsize 1000
+           return ()
