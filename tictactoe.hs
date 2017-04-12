@@ -38,8 +38,6 @@ getboardsize = do
              let y = (runState getcolumn fun) in
                 (Just (*) <*> (fst x)  <*>  (fst y) )
 
-magicsquare :: [Int]
-magicsquare = [2,9,4,7,5,4,7,5,4] 
 
 data BoardState = BoardState { xloc :: [Int],
                                oloc :: [Int],
@@ -67,6 +65,27 @@ drawo :: Picture
 drawo = color rose $ thickCircle 25 2
 
 -- END Unused code --
+winningcombination :: [[Int]]
+winningcombination = [[1,2,3],[4,5,6],[7,8,9],
+                      [1,4,7],[2,5,8],[3,6,9],
+                      [1,5,9],[3,5,8]]
+
+
+checkallcombination ::  [Int] -> Bool
+checkallcombination l = let wc = winningcombination in
+                          loop wc
+                            where
+                              loop :: [[Int]] -> Bool
+                              loop wc =
+                                case wc of
+                                  [] ->  False
+                                  (x:xs) -> if containscombination x l then True else loop xs
+
+containscombination :: [Int] -> [Int] -> Bool
+containscombination xs xs1 =
+  case xs of
+    [] -> True 
+    (x:xss) -> if (x `elem` xs1) then containscombination xss xs1 else False
 
 createarray :: IO ( IOArray Int Double)
 createarray =  do {
@@ -133,15 +152,13 @@ nextstate  player (BoardState xloc oloc index) move=  BoardState newx newo newin
   newindex = stateindex newx newo
 
 magicnumber :: [Int]-> Int
-magicnumber l = sum $ ([magicsquare !! (x-1) | x <- l, x > 0])
+magicnumber l = if checkallcombination l then 15 else 14
 
 
 nextvalue :: (String -> IO()) -> Player -> Int -> ( IOArray Int Double) -> BoardState-> IO (BoardState,IOArray Int Double) 
 nextvalue log player move a ( BoardState xloc oloc index) =  do
   let newstate = (nextstate player ( BoardState xloc oloc index) move)
   x <- catch (readthevalue a (ReinforcementLearning.index newstate))(\(SomeException e) -> printf "Reading [%d} in Next value" index >> print e >> throwIO e)
-  -- log $ printf "Move is [%d] Value from value table is %f" move x
-  -- log $ (show player)
   if (x == -1.0)
   then if ((magicnumber (ReinforcementLearning.xloc newstate)) == 15)
        then do
@@ -257,33 +274,28 @@ gameplanrevised log a state newstate = do
                                           False -> do
                                             rm <- randommove newstate
                                             (gm,c) <- greedymove log a O newstate
-                                            log $ printf "Greedy Move is %d \n " gm
                                             valueofnewstate <-  catch (readthevalue c (ReinforcementLearning.index newstate)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index newstate)]>> throwIO e)
                                             (nv,d) <- nextvalue logs O (randomgreedy log r rm gm) c newstate
                                             d' <- if em then return d else update d state nv
                                             result1 <- (terminalstatep log d' (ReinforcementLearning.index nv));
                                             valueofnewstate1 <-  catch (readthevalue d' (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
-                                            if (length (possiblemoves nv) == 0)
-                                              then
+                                            if result1
+                                              then do
                                               return (d',nv,valueofnewstate1)
-                                              else if result1
-                                                   then do
-                                                   return (d',nv,valueofnewstate1)
-                                                   else do
-                                                   r <- randommove newstate
-                                                   (nv1,d1') <- nextvalue logs X r d' newstate
-                                                   exploremove d1' newstate nv1
+                                              else do
+                                              r <- randommove nv
+                                              (nv1,d1') <- nextvalue logs X r d' nv
+                                              exploremove d1' nv nv1
                                     False -> do
                                       r1 <- randommove newstate
                                       (ns,na) <- nextvalue logs X r1 a newstate
-                                      exploremove na ns newstate
+                                      exploremove na newstate ns
   
 
 --   "Plays 1 game against the random player. Also learns and prints.
 --    :X moves first and is random.  :O learns"
 game ::  (String -> IO()) ->BoardState  -> BoardState -> IOArray Int Double -> IO (IOArray Int Double,BoardState,Double) 
 game log state newstate a  = do
-  log $ "Call game"
   (newa, state, result )<-  gameplanrevised log a state newstate
   return (newa, state, result )
    
@@ -300,7 +312,7 @@ playntimes a log n = do writethevalue a 0 0.5
                               | n > 0 = do
                                   (boardstate, b) <- ns 
                                   (updatedarray, _, result) <- game logs s  boardstate b; 
-                                  log $ printf "Game returns %f\n" result
+                                  -- log $ printf "Game returns %f\n" result
                                   r1 <- randommove (BoardState [] [] 0)
                                   playtime updatedarray (BoardState [] [] 0) (nextvalue logs X  r1 updatedarray (BoardState [] [] 0)) (n - 1) (acc + result) r1
   
@@ -340,6 +352,7 @@ playrepeatedly a arr numrun1  numbins binsize = do
 
 main = let numbins = 1 in 
          do
+           if checkallcombination [5,8,4,5] then putStrLn "Win" else putStrLn "Lose"
            arr <- newArray (0,numbins) 0.0;
-           ReinforcementLearning.numruns arr 1 1 numbins 1000 -- numruns numruns numbins binsize
+           ReinforcementLearning.numruns arr 100 40 numbins 100 -- numruns numruns numbins binsize
            return ()
