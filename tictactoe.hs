@@ -276,16 +276,14 @@ gameplanrevised log a state newstate = do
                                             (gm,c) <- greedymove log a O newstate
                                             valueofnewstate <-  catch (readthevalue c (ReinforcementLearning.index newstate)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index newstate)]>> throwIO e)
                                             (nv,d) <- nextvalue logs O (randomgreedy log r rm gm) c newstate
-                                            d' <- if em then return d else update d state nv
+                                            d' <- if em then return d else update d newstate nv
                                             result1 <- (terminalstatep log d' (ReinforcementLearning.index nv));
                                             valueofnewstate1 <-  catch (readthevalue d' (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
                                             if result1
                                               then do
                                               return (d',nv,valueofnewstate1)
                                               else do
-                                              r <- randommove nv
-                                              (nv1,d1') <- nextvalue logs X r d' nv
-                                              exploremove d1' nv nv1
+                                              exploremove d' newstate nv 
                                     False -> do
                                       r1 <- randommove newstate
                                       (ns,na) <- nextvalue logs X r1 a newstate
