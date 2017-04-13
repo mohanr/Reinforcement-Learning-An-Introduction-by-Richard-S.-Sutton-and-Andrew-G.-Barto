@@ -148,7 +148,7 @@ nextstate :: Player -> BoardState -> Int -> BoardState
 -- nextstate  player (BoardState xloc oloc index) move= traceShowId $  BoardState newx newo newindex where
 nextstate  player (BoardState xloc oloc index) move=  BoardState newx newo newindex where
   newx = if isX player then (append move xloc) else xloc
-  newo = if isX player then (append move oloc) else oloc
+  newo = if not( isX player )then (append move oloc) else oloc
   newindex = stateindex newx newo
 
 magicnumber :: [Int]-> Int
@@ -168,14 +168,14 @@ nextvalue log player move a ( BoardState xloc oloc index) =  do
             return (newstate,a)
        else if ((magicnumber (ReinforcementLearning.oloc newstate)) == 15)
             then do
-                 (writethevalue a  (ReinforcementLearning.index newstate) 1)
+                 (writethevalue a  (ReinforcementLearning.index newstate) 1.0)
                  playero $ printf "Magic number is %d. Player O wins" (magicnumber  (ReinforcementLearning.oloc newstate))
                  playero $ show (ReinforcementLearning.oloc newstate)
                  return (newstate,a)
             else if ((length (ReinforcementLearning.oloc newstate))+(length (ReinforcementLearning.xloc newstate)) == 9)
             then do
-                 playero $ printf "Sume of Length of states is 9"
-                 (writethevalue a  (ReinforcementLearning.index newstate) 0)
+                 playero $ printf "Sum of Length of states is 9"
+                 (writethevalue a  (ReinforcementLearning.index newstate) 0.0)
                  return (newstate,a)
             else do
                  (writethevalue a  (ReinforcementLearning.index newstate) 0.5)
@@ -231,8 +231,8 @@ greedymove log a player state =
   let possibles = possiblemoves state in
     case possibles of
       [] -> return (0, a)
-      p  -> let bestvalue = -2.0 in-- Since default value in array is -1.0
-              let bestmove = 0 in
+      p  -> let bestvalue = -1.0 in-- Since default value in array is -1.0
+              let bestmove = (head p) in
                 choosebestmove a p bestvalue bestmove
                 where
                   choosebestmove arr [] bestvalue1 bestmove1 = return (0,a)
@@ -244,10 +244,6 @@ greedymove log a player state =
                       GT -> return (bestmove1,b)
                       EQ -> return (bestmove1,b)
   
-randomgreedy :: (String -> IO()) ->Double -> Int -> Int -> Int
-randomgreedy log r1 rm gm = if (r1 < 0.01)
-                            then rm
-                            else gm
 
 exploratorymove :: Double -> Bool
 exploratorymove r = do
@@ -262,32 +258,40 @@ gameplanrevised log a state newstate = do
                               do
                                 r <- randombetween;
                                 let em = exploratorymove r in
-                                  case em of
-                                    True ->
-                                      do
-                                        result <- (terminalstatep log a (ReinforcementLearning.index newstate));
-                                        case result of
-                                          True -> do
-                                            b <- update a state newstate
-                                            valueofnewstate <- catch (readthevalue b (ReinforcementLearning.index newstate)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index newstate)]>> throwIO e)
-                                            return (b,newstate,valueofnewstate)
-                                          False -> do
+                                  do
+                                    result <- (terminalstatep log a (ReinforcementLearning.index newstate));
+                                    case result of
+                                      True -> do
+                                        b <- update a state newstate
+                                        valueofnewstate <- catch (readthevalue b (ReinforcementLearning.index newstate)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index newstate)]>> throwIO e)
+                                        return (b,newstate,valueofnewstate)
+                                      False -> do
+                                        if em
+                                          then do
                                             rm <- randommove newstate
-                                            (gm,c) <- greedymove log a O newstate
-                                            valueofnewstate <-  catch (readthevalue c (ReinforcementLearning.index newstate)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index newstate)]>> throwIO e)
-                                            (nv,d) <- nextvalue logs O (randomgreedy log r rm gm) c newstate
-                                            d' <- if em then return d else update d newstate nv
-                                            result1 <- (terminalstatep log d' (ReinforcementLearning.index nv));
-                                            valueofnewstate1 <-  catch (readthevalue d' (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
+                                            (nv,d) <- nextvalue logs O rm a newstate
+                                            result1 <- (terminalstatep log d (ReinforcementLearning.index nv));
+                                            valueofnewstate1 <-  catch (readthevalue d (ReinforcementLearning.index nv)) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv)]>> throwIO e)
                                             if result1
                                               then do
-                                              return (d',nv,valueofnewstate1)
+                                              return (d,nv,valueofnewstate1)
                                               else do
-                                              exploremove d' newstate nv 
-                                    False -> do
-                                      r1 <- randommove newstate
-                                      (ns,na) <- nextvalue logs X r1 a newstate
-                                      exploremove na newstate ns
+                                              r1 <- randommove nv
+                                              (ns,na) <- nextvalue logs X r1 d nv
+                                              exploremove na nv ns 
+                                          else do
+                                            (gm,c) <- greedymove log a O newstate
+                                            (nv',d') <- nextvalue logs O gm c newstate
+                                            d'' <- update d' newstate nv'
+                                            result2 <- (terminalstatep log d'' (ReinforcementLearning.index nv'));
+                                            valueofnewstate2 <-  catch (readthevalue d'' (ReinforcementLearning.index nv')) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv')]>> throwIO e)
+                                            if result2
+                                              then do
+                                              return (d'',nv',valueofnewstate2)
+                                              else do
+                                              r1 <- randommove nv'
+                                              (ns,na) <- nextvalue logs X r1 d'' nv'
+                                              exploremove na nv' ns 
   
 
 --   "Plays 1 game against the random player. Also learns and prints.
@@ -301,18 +305,18 @@ playntimes :: IOArray Int Double -> (String -> IO()) ->Int -> IO (IOArray Int Do
 -- playntimes log n = do a <- createarray;
 playntimes a log n = do writethevalue a 0 0.5
                         r <- (randommove (BoardState [] [] 0))
-                        playtime  a (BoardState [] [] 0) (nextvalue logs X r a (BoardState [] [] 0)) n 0 r
+                        playtime  (BoardState [] [] 0) (nextvalue logs X r a (BoardState [] [] 0)) n 0 r
                           where
-                            playtime :: IOArray Int Double -> BoardState -> IO (BoardState,IOArray Int Double) -> Int -> Double -> Int -> IO (IOArray Int Double,Double)
-                            playtime finala s ns n acc r --finala is the consolidation for the next run
+                            playtime ::  BoardState -> IO (BoardState,IOArray Int Double) -> Int -> Double -> Int -> IO (IOArray Int Double,Double)
+                            playtime  s ns n acc r --finala is the consolidation for the next run
                               | n == 0 = do logsresult $ printf "Played 100 times %f  %f"  acc (acc/100.0)
-                                            return (finala,acc)
+                                            (_, b) <- ns 
+                                            return (b,acc)
                               | n > 0 = do
                                   (boardstate, b) <- ns 
                                   (updatedarray, _, result) <- game logs s  boardstate b; 
-                                  -- log $ printf "Game returns %f\n" result
                                   r1 <- randommove (BoardState [] [] 0)
-                                  playtime updatedarray (BoardState [] [] 0) (nextvalue logs X  r1 updatedarray (BoardState [] [] 0)) (n - 1) (acc + result) r1
+                                  playtime (BoardState [] [] 0) (nextvalue logs X  r1 updatedarray (BoardState [] [] 0)) (n - 1) (acc + result) r1
   
 numruns :: IOArray Int Double ->Int -> Int -> Int -> Int -> IO()
 numruns arr n1 n bins binsize  
@@ -335,7 +339,6 @@ playrepeatedly a arr numrun1  numbins binsize = do
         | i < numbins = do
             (b,acc) <- playntimes a logs bs;
             lastvalue <- readthevalue arr i
-            printf " Writing lastvalue + accumulator %f + %f \n" lastvalue acc
             writethevalue arr i (lastvalue + acc) 
             loop b (i+1) bs
         where 
@@ -350,7 +353,7 @@ playrepeatedly a arr numrun1  numbins binsize = do
 
 main = let numbins = 1 in 
          do
-           if checkallcombination [5,8,4,5] then putStrLn "Win" else putStrLn "Lose"
            arr <- newArray (0,numbins) 0.0;
-           ReinforcementLearning.numruns arr 100 40 numbins 100 -- numruns numruns numbins binsize
+           ReinforcementLearning.numruns arr 100 100 numbins 100 -- numruns numruns numbins binsize
            return ()
+ 
