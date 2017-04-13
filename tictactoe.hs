@@ -282,7 +282,7 @@ gameplanrevised log a state newstate = do
                                           else do
                                             (gm,c) <- greedymove log a O newstate
                                             (nv',d') <- nextvalue logs O gm c newstate
-                                            d'' <- update d' newstate nv'
+                                            d'' <- update d' state nv'
                                             result2 <- (terminalstatep log d'' (ReinforcementLearning.index nv'));
                                             valueofnewstate2 <-  catch (readthevalue d'' (ReinforcementLearning.index nv')) (\(SomeException e) -> print e >> mapM_ (putStr . show) [ (ReinforcementLearning.index nv')]>> throwIO e)
                                             if result2
@@ -351,9 +351,9 @@ playrepeatedly a arr numrun1  numbins binsize = do
                               return a
 
 
-main = let numbins = 1 in 
+main = let numbins = 30 in 
          do
            arr <- newArray (0,numbins) 0.0;
-           ReinforcementLearning.numruns arr 100 100 numbins 100 -- numruns numruns numbins binsize
+           ReinforcementLearning.numruns arr 2 2 numbins 100 -- numruns numruns numbins binsize
            return ()
  
