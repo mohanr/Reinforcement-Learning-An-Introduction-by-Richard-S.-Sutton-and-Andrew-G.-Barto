@@ -18,14 +18,22 @@ runs =  2000
 
 iterations = 3000 
 
-runsimulations :: Double -> Matrix R
-runsimulations  alpha = simulate 0 (matrix 1 [iterations] * 0) (matrix 1 [iterations] * 0) iterations karmbandit
+-- Get matrix of uniformly distributed values
+uniformrand r c = do
+  seed <- randomIO
+  return (reshape c $ randomVector seed Uniform (r * c))
+
+runsimulations :: Double -> IO(Matrix Double)
+runsimulations  alpha = simulate 0 (matrix 1 [iterations] * 0) (matrix 1 [iterations] * 0)
+                        iterations karmbandit (matrix runs [karmbandit] * 0) (matrix runs [karmbandit] * 0)
+                        
                            where
-                             simulate :: Double -> Matrix R -> Matrix R -> Double-> Double-> Matrix R
-                             simulate x q n iter k=
+                             simulate :: Double -> Matrix R -> Matrix R -> Double-> Double-> Matrix R -> Matrix R -> IO( Matrix Double) 
+                             simulate x recordsaver optimalsaver iter k q n=
                                case () of _
                                             | x >= iter -> do
-                                                -- randomR (1,k) (mkStdGen 66)
-                                                matrix 2 [1..6]
-                                            | x < iter ->  simulate (x + 1 ) q n iter k
-main = print (runsimulations 0)
+                                                uniformrand 10 10
+                                            | x < iter ->  simulate (x + 1 ) recordsaver optimalsaver iter k q n
+main = do
+  m <- runsimulations 0
+  print m 
