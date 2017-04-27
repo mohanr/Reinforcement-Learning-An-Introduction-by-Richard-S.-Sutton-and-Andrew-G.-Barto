@@ -5,7 +5,9 @@ import Control.Monad.State
 import qualified Data.Map as Map
 import Text.Printf
 import System.Random
-
+import Control.Monad
+import Data.Array
+import Data.Foldable
 
 
 karmbandit = 10 
@@ -22,10 +24,18 @@ uniformrand r c = do
   seed <- randomIO
   return (reshape c $ randomVector seed Uniform (r * c))
 
-converttoboolean :: (Matrix Double) -> IO (Matrix Double)
-converttoboolean m = do
+converttooneszeros :: (Matrix Double) -> IO (Matrix Double)
+converttooneszeros m = do
   return $ step (m - 0.1)
 
+randomlist :: Double-> Double-> IO [Double]
+randomlist a b = getStdGen >>= return . Data.Foldable.toList .listArray(0,9) . randomRs (a,b)
+
+randomvector ::  IO (Matrix Double)
+randomvector = do
+    r  <- (randomlist 0 9)
+    return $ pinv (row r)
+   
 runsimulations :: Double -> IO(Matrix Double)
 runsimulations  alpha = simulate 0 (matrix 1 [iterations] * 0) (matrix 1 [iterations] * 0)
                         iterations karmbandit (matrix runs [karmbandit] * 0) (matrix runs [karmbandit] * 0)
@@ -36,8 +46,10 @@ runsimulations  alpha = simulate 0 (matrix 1 [iterations] * 0) (matrix 1 [iterat
                                case () of _
                                             | x >= iter -> do
                                                 m <- uniformrand 10 10
-                                                converttoboolean m
+                                                liftM2  (<>) (converttooneszeros m) (randomvector)
                                             | x < iter ->  simulate (x + 1 ) recordsaver optimalsaver iter k q n
 main = do
   m <- runsimulations 0
-  print m 
+  n <- randomvector
+  print m
+  return ()
