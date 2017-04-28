@@ -48,6 +48,13 @@ randomvector = do
     r  <- (randomlist 0 9)
     return $ fromList r
 
+subtractone :: IO (Vector Double) -> IO (Vector Double)
+subtractone v = do
+  noniov <- v
+  let xs = Numeric.LinearAlgebra.toList ( noniov ) in
+    return $ fromList  [  1 - x | x <- xs]
+    
+
 runsimulations :: Double -> IO(Vector Double)
 runsimulations  alpha = simulate 0 (matrix 1 [iterations] * 0) (matrix 1 [iterations] * 0)
                         iterations karmbandit (matrix runs [karmbandit] * 0) (matrix runs [karmbandit] * 0)
@@ -62,6 +69,9 @@ runsimulations  alpha = simulate 0 (matrix 1 [iterations] * 0) (matrix 1 [iterat
                                             | x < iter ->  simulate (x + 1 ) recordsaver optimalsaver iter k q n
 main = do
   m <- runsimulations 0
-  n <- randomvector
+  u <- uniformrandvector 10
+  n <- converttooneszeros u
   print n
+  n1 <- subtractone (converttooneszeros u)
+  print n1
   return ()
