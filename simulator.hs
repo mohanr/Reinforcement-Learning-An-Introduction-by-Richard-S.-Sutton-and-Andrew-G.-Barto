@@ -18,38 +18,50 @@ runs =  2000
 
 iterations = 3000 
 
--- Get matrix of uniformly distributed values
-uniformrand :: Int -> Int ->  IO (Matrix Double)
-uniformrand r c = do
+-- Unused Get matrix of uniformly distributed values
+uniformrandmatrix :: Int -> Int ->  IO (Matrix Double)
+uniformrandmatrix r c = do
   seed <- randomIO
   return (reshape c $ randomVector seed Uniform (r * c))
 
-converttooneszeros :: (Matrix Double) -> IO (Matrix Double)
+-- Get Vector of uniformly distributed values
+uniformrandvector :: Int ->  IO (Vector Double)
+uniformrandvector r  = do
+  seed <- randomIO
+  return  $ randomVector seed Uniform r
+
+converttooneszeros :: (Vector Double) -> IO (Vector Double)
 converttooneszeros m = do
   return $ step (m - 0.1)
 
 randomlist :: Double-> Double-> IO [Double]
 randomlist a b = getStdGen >>= return . Data.Foldable.toList .listArray(0,9) . randomRs (a,b)
 
-randomvector ::  IO (Matrix Double)
+--Unused
+randommatrix ::  IO (Matrix Double)
+randommatrix = do
+    r  <- (randomlist 0 9)
+    return $ (row r)
+   
+randomvector ::  IO (Vector Double)
 randomvector = do
     r  <- (randomlist 0 9)
-    return $ pinv (row r)
-   
-runsimulations :: Double -> IO(Matrix Double)
+    return $ fromList r
+
+runsimulations :: Double -> IO(Vector Double)
 runsimulations  alpha = simulate 0 (matrix 1 [iterations] * 0) (matrix 1 [iterations] * 0)
                         iterations karmbandit (matrix runs [karmbandit] * 0) (matrix runs [karmbandit] * 0)
                         
                            where
-                             simulate :: Double -> Matrix R -> Matrix R -> Double-> Double-> Matrix R -> Matrix R -> IO( Matrix Double) 
+                             simulate :: Double -> Matrix R -> Matrix R -> Double-> Double-> Matrix R -> Matrix R -> IO( Vector Double) 
                              simulate x recordsaver optimalsaver iter k q n=
                                case () of _
                                             | x >= iter -> do
-                                                m <- uniformrand 10 10
-                                                liftM2  (<>) (converttooneszeros m) (randomvector)
+                                                m <- uniformrandvector 10
+                                                liftM2  (*) (converttooneszeros m) (randomvector)
                                             | x < iter ->  simulate (x + 1 ) recordsaver optimalsaver iter k q n
 main = do
   m <- runsimulations 0
   n <- randomvector
-  print m
+  print n
   return ()
