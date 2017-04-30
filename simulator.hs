@@ -60,15 +60,14 @@ maxindexes m = do
     return $ fromList (map fromIntegral idxs)
   
 runsimulations :: Double -> IO(Vector Double)
-runsimulations  alpha = simulate 2000 (matrix 1 [iterations] * 0) (matrix 1 [iterations] * 0)
-                        iterations karmbandit (matrix runs [karmbandit] * 0) (matrix runs [karmbandit] * 0)
-                        
+runsimulations  alpha = simulate 2000 (fromList (take iterations (repeat 0))) (fromList (take iterations (repeat 0)))  
+                        iterations karmbandit (matrix karmbandit (map fromIntegral [1..runs])* 0.0) (matrix karmbandit (map fromIntegral [1..runs]) * 0.0)
                            where
-                             simulate :: Double -> Matrix R -> Matrix R -> Double-> Double-> Matrix Double -> Matrix R -> IO( Vector Double) 
+                             simulate :: Int -> Vector Int -> Vector Int -> Int -> Int -> Matrix Double -> Matrix Double -> IO( Vector Double) 
                              simulate x recordsaver optimalsaver iter k q n=
                                case () of _
                                             | x >= iter -> do
-                                                m <- uniformrandvector 10
+                                                m <- uniformrandvector runs
                                                 s <- subtractone(converttooneszeros m) 
                                                 liftM2 (+) (liftM2  (*) (converttooneszeros m) (randomvector))
                                                   (liftM2  (*) (subtractone(converttooneszeros m)) (maxindexes  q))
