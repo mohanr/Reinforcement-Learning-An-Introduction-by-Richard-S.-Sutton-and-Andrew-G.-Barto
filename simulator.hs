@@ -34,19 +34,19 @@ converttooneszeros :: (Vector Double) -> IO (Vector Double)
 converttooneszeros m = do
   return $ step (m - 0.1)
 
-randomlist :: Double-> Double-> IO [Double]
-randomlist a b = getStdGen >>= return . Data.Foldable.toList .listArray(0,9) . randomRs (a,b)
+randomlist :: Int -> Double -> Int -> Double-> IO [Double]
+randomlist a a1 b b1 = getStdGen >>= return . Data.Foldable.toList .listArray(a,b) . randomRs (a1,b1)
 
 --Unused
 randommatrix ::  IO (Matrix Double)
 randommatrix = do
-    r  <- (randomlist 0 9)
+    r  <- (randomlist 0 0 9 9)
     return $ (row r)
    
-randomvector ::  IO (Vector Double)
-randomvector = do
-    r  <- (randomlist 0 9)
-    return $ fromList r
+randomvector ::  Int -> Double -> IO (Vector Double)
+randomvector runsi runsd = do
+  r  <- (randomlist 1 1 runsi runsd)
+  return $ fromList r
 
 subtractone :: IO (Vector Double) -> IO (Vector Double)
 subtractone v = do
@@ -61,7 +61,7 @@ maxindexes m = do
   
 runsimulations :: Double -> IO(Vector Double)
 runsimulations  alpha = simulate 2000 (fromList (take iterations (repeat 0))) (fromList (take iterations (repeat 0)))  
-                        iterations karmbandit (matrix karmbandit (map fromIntegral [1..runs])* 0.0) (matrix karmbandit (map fromIntegral [1..runs]) * 0.0)
+                        iterations karmbandit (matrix karmbandit (map fromIntegral [1..(runs * 10)])* 0.0) (matrix karmbandit (map fromIntegral [1..runs]) * 0.0)
                            where
                              simulate :: Int -> Vector Int -> Vector Int -> Int -> Int -> Matrix Double -> Matrix Double -> IO( Vector Double) 
                              simulate x recordsaver optimalsaver iter k q n=
@@ -69,13 +69,13 @@ runsimulations  alpha = simulate 2000 (fromList (take iterations (repeat 0))) (f
                                             | x >= iter -> do
                                                 m <- uniformrandvector runs
                                                 s <- subtractone(converttooneszeros m) 
-                                                liftM2 (+) (liftM2  (*) (converttooneszeros m) (randomvector))
+                                                print $ size $ s
+                                                q1 <- (maxindexes  q)
+                                                print $ size $ q1
+                                                liftM2 (+) (liftM2  (*) (converttooneszeros m) (randomvector runs (fromIntegral runs)))
                                                   (liftM2  (*) (subtractone(converttooneszeros m)) (maxindexes  q))
                                             | x < iter ->  simulate (x + 1 ) recordsaver optimalsaver iter k q n
 main = do
   m <- runsimulations 0
-  u <- uniformrandvector 10
-  n <- converttooneszeros u
-  n1 <- subtractone (converttooneszeros u)
-  print n1
+  print m
   return ()
