@@ -54,24 +54,29 @@ subtractone v = do
   let xs = Numeric.LinearAlgebra.toList ( noniov ) in
     return $ fromList  [  1 - x | x <- xs]
     
-
+maxindexes :: Matrix Double -> IO (Vector Double)
+maxindexes m = do
+  let idxs = map maxIndex . toRows $ m in
+    return $ fromList (map fromIntegral idxs)
+  
 runsimulations :: Double -> IO(Vector Double)
-runsimulations  alpha = simulate 0 (matrix 1 [iterations] * 0) (matrix 1 [iterations] * 0)
+runsimulations  alpha = simulate 2000 (matrix 1 [iterations] * 0) (matrix 1 [iterations] * 0)
                         iterations karmbandit (matrix runs [karmbandit] * 0) (matrix runs [karmbandit] * 0)
                         
                            where
-                             simulate :: Double -> Matrix R -> Matrix R -> Double-> Double-> Matrix R -> Matrix R -> IO( Vector Double) 
+                             simulate :: Double -> Matrix R -> Matrix R -> Double-> Double-> Matrix Double -> Matrix R -> IO( Vector Double) 
                              simulate x recordsaver optimalsaver iter k q n=
                                case () of _
                                             | x >= iter -> do
                                                 m <- uniformrandvector 10
-                                                liftM2  (*) (converttooneszeros m) (randomvector)
+                                                s <- subtractone(converttooneszeros m) 
+                                                liftM2 (+) (liftM2  (*) (converttooneszeros m) (randomvector))
+                                                  (liftM2  (*) (subtractone(converttooneszeros m)) (maxindexes  q))
                                             | x < iter ->  simulate (x + 1 ) recordsaver optimalsaver iter k q n
 main = do
   m <- runsimulations 0
   u <- uniformrandvector 10
   n <- converttooneszeros u
-  print n
   n1 <- subtractone (converttooneszeros u)
   print n1
   return ()
