@@ -8,7 +8,7 @@ import System.Random
 import Control.Monad
 import Data.Array
 import Data.Foldable
-
+import Data.List
 
 karmbandit = 10 
 
@@ -53,28 +53,36 @@ subtractone v = do
   noniov <- v
   let xs = Numeric.LinearAlgebra.toList ( noniov ) in
     return $ fromList  [  1 - x | x <- xs]
-    
+
+matrixmean :: IO(Vector Double) -> IO Int
+matrixmean mat = do
+  m <- mat
+  print $ m
+  return $ Data.List.length (Numeric.LinearAlgebra.find (==1.0) m)
+
 maxindexes :: Matrix Double -> IO (Vector Double)
 maxindexes m = do
   let idxs = map maxIndex . toRows $ m in
     return $ fromList (map fromIntegral idxs)
   
-runsimulations :: Double -> IO(Vector Double)
+runsimulations :: Double -> IO Int -- IO(Vector Double)
 runsimulations  alpha = simulate 2000 (fromList (take iterations (repeat 0))) (fromList (take iterations (repeat 0)))  
-                        iterations karmbandit (matrix karmbandit (map fromIntegral [1..(runs * 10)])* 0.0) (matrix karmbandit (map fromIntegral [1..runs]) * 0.0)
+                        iterations karmbandit (matrix karmbandit (map fromIntegral [1..(runs * 10)])* 0.0) (matrix karmbandit (map fromIntegral [1..(runs*10)]) * 0.0 ) (matrix karmbandit (map fromIntegral [1..(runs * 10)])* 0.0)
                            where
-                             simulate :: Int -> Vector Int -> Vector Int -> Int -> Int -> Matrix Double -> Matrix Double -> IO( Vector Double) 
-                             simulate x recordsaver optimalsaver iter k q n=
+                             simulate :: Int -> Vector Int -> Vector Int -> Int -> Int -> Matrix Double -> Matrix Double -> Matrix Double -> IO Int 
+                             simulate x recordsaver optimalsaver iter k q n bandit =
                                case () of _
                                             | x >= iter -> do
                                                 m <- uniformrandvector runs
                                                 s <- subtractone(converttooneszeros m) 
-                                                print $ size $ s
-                                                q1 <- (maxindexes  q)
-                                                print $ size $ q1
-                                                liftM2 (+) (liftM2  (*) (converttooneszeros m) (randomvector runs (fromIntegral runs)))
-                                                  (liftM2  (*) (subtractone(converttooneszeros m)) (maxindexes  q))
-                                            | x < iter ->  simulate (x + 1 ) recordsaver optimalsaver iter k q n
+                                                -- print $ size $ s
+                                                -- q1 <- (maxindexes  q)
+                                                -- print $ size $ q1
+                                                let a = (liftM2 (+) (liftM2  (*) (converttooneszeros m) (randomvector runs (fromIntegral runs)))
+                                                         (liftM2  (*) (subtractone(converttooneszeros m)) (maxindexes  q))) in
+                                                  let opt = maxindexes bandit in
+                                                    matrixmean opt
+                                            | x < iter ->  simulate (x + 1 ) recordsaver optimalsaver iter k q n bandit
 main = do
   m <- runsimulations 0
   print m
