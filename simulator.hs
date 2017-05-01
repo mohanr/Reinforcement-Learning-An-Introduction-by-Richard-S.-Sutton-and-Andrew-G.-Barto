@@ -75,12 +75,12 @@ mutateandcopy k v value = runST $ do
   writeVector w k value
   v0 <- freezeVector w
   return v0
-
-runsimulations :: Double -> IO Int -- IO(Vector Double)
-runsimulations  alpha = simulate 2000 (fromList (take iterations (repeat 0))) (fromList (take iterations (repeat 0)))  
+  
+runsimulations :: Double ->  IO (Vector Double)-- IO(Vector Double)
+runsimulations  alpha = simulate 3000 (fromList (take iterations (repeat 0))) (fromList (take iterations (repeat 0.0)))  
                         iterations karmbandit (matrix karmbandit (map fromIntegral [1..(runs * 10)])* 0.0) (matrix karmbandit (map fromIntegral [1..(runs*10)]) * 0.0 ) (matrix karmbandit (map fromIntegral [1..(runs * 10)])* 0.0)
                            where
-                             simulate :: Int -> Vector Int -> Vector Int -> Int -> Int -> Matrix Double -> Matrix Double -> Matrix Double -> IO Int 
+                             simulate :: Int -> Vector Int -> Vector Double -> Int -> Int -> Matrix Double -> Matrix Double -> Matrix Double -> IO (Vector Double) 
                              simulate x recordsaver optimalsaver iter k q n bandit =
                                case () of _
                                             | x >= iter -> do
@@ -93,11 +93,12 @@ runsimulations  alpha = simulate 2000 (fromList (take iterations (repeat 0))) (f
                                                          (liftM2  (*) (subtractone(converttooneszeros m)) (maxindexes  q))) in
                                                   let opt = maxindexes bandit in
                                                     do
-                                                      matrixmean opt
+                                                      mm <- matrixmean opt
+                                                      return $ Numeric.LinearAlgebra.accum  optimalsaver const [(x - 1,fromIntegral mm)]
+
+                                                      
                                             | x < iter ->  simulate (x + 1 ) recordsaver optimalsaver iter k q n bandit
 main = do
   m <- runsimulations 0
   print m
-  let n = (mutateandcopy 0 (fromList [1,2]:: Vector Int)  2) in
-    print n
   return ()
