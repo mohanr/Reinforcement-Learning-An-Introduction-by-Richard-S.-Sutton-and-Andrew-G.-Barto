@@ -13,7 +13,7 @@ import Control.Monad.ST
 import Control.Monad
 import Data.Array.Unboxed
 import Data.Array.ST
-
+import Numeric.LinearAlgebra.Data
 karmbandit = 10 
 
 alpha = 0.1 
@@ -94,11 +94,17 @@ runsimulations  alpha = simulate 3000 (fromList (take iterations (repeat 0))) (f
                                                   let opt = maxindexes bandit in
                                                     do
                                                       mm <- matrixmean opt
+                                                      a1 <- a
+                                                      print $ size $ a1
+                                                      print $ size $ bandit
+                                                      let range = (size $ a1) in
+                                                        let r = [  bandit `atIndex` (x,y)| x <- [0..range], y <- (Numeric.LinearAlgebra.toList a1) ] in
+                                                          return $ Numeric.LinearAlgebra.accum  optimalsaver const [(x - 1,fromIntegral mm)]
                                                       return $ Numeric.LinearAlgebra.accum  optimalsaver const [(x - 1,fromIntegral mm)]
 
                                                       
                                             | x < iter ->  simulate (x + 1 ) recordsaver optimalsaver iter k q n bandit
 main = do
   m <- runsimulations 0
-  print m
+  -- print m
   return ()
