@@ -80,19 +80,16 @@ listaverage :: (Fractional e )  => [e] -> e
 listaverage l = let (sum,count) = foldr ( \lambda (s,c) -> (s+lambda,c+1)) (0,0) l in
                   sum/count
 
-runsimulations :: Double ->  IO ()
-runsimulations  alpha = simulate 3000 (fromList (take iterations (repeat 0))) (fromList (take iterations (repeat 0.0)))  
+runsimulations :: Double ->  IO (Vector Double )
+runsimulations  alpha = simulate 3000 (fromList (take iterations (repeat 0.0))) (fromList (take iterations (repeat 0.0)))  
                         iterations karmbandit (matrix karmbandit (map fromIntegral [1..(runs * 10)])* 0.0) (matrix karmbandit (map fromIntegral [1..(runs*10)]) * 0.0 ) (matrix karmbandit (map fromIntegral [1..(runs * 10)])* 0.0)
                            where
-                             simulate :: Int -> Vector Int -> Vector Double -> Int -> Int -> Matrix Double -> Matrix Double -> Matrix Double -> IO () 
-                             simulate x recordsaver optimalsaver iter k q n bandit =
+                             simulate :: Int -> Vector Double -> Vector Double -> Int -> Int -> Matrix Double -> Matrix Double -> Matrix Double -> IO (Vector Double ) 
+                             simulate x rewardsaver optimalsaver iter k q n bandit =
                                case () of _
                                             | x >= iter -> do
                                                 m <- uniformrandvector runs
                                                 s <- subtractone(converttooneszeros m) 
-                                                -- print $ size $ s
-                                                -- q1 <- (maxindexes  q)
-                                                -- print $ size $ q1
                                                 let a = (liftM2 (+) (liftM2  (*) (converttooneszeros m) (randomvector runs (fromIntegral runs)))
                                                          (liftM2  (*) (subtractone(converttooneszeros m)) (maxindexes  q))) in
                                                   let opt = maxindexes bandit in
@@ -103,11 +100,11 @@ runsimulations  alpha = simulate 3000 (fromList (take iterations (repeat 0))) (f
                                                       print $ size $ bandit
                                                       let range = (size $ a1) in
                                                         let r = [  bandit `atIndex` (x,round y)| (x,y) <- zip  [0..range] (Numeric.LinearAlgebra.toList a1) ] in
-                                                          printf "Length of R is [%d]" (length r) 
-                                                      -- return $ Numeric.LinearAlgebra.accum  optimalsaver const [(x - 1,fromIntegral mm)]
+                                                          let rs =( Numeric.LinearAlgebra.accum  rewardsaver const [(x - 1,(listaverage r))]) in
+                                                            return $ Numeric.LinearAlgebra.accum  optimalsaver const [(x - 1,fromIntegral mm)]
 
                                                       
-                                            | x < iter ->  simulate (x + 1 ) recordsaver optimalsaver iter k q n bandit
+                                            | x < iter ->  simulate (x + 1 ) rewardsaver optimalsaver iter k q n bandit
 main = do
   m <- runsimulations 0
   -- print m
