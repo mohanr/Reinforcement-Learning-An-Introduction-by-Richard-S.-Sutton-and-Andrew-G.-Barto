@@ -75,12 +75,16 @@ mutateandcopy k v value = runST $ do
   writeVector w k value
   v0 <- freezeVector w
   return v0
-  
-runsimulations :: Double ->  IO (Vector Double)-- IO(Vector Double)
+
+listaverage :: (Fractional e )  => [e] -> e
+listaverage l = let (sum,count) = foldr ( \lambda (s,c) -> (s+lambda,c+1)) (0,0) l in
+                  sum/count
+
+runsimulations :: Double ->  IO ()
 runsimulations  alpha = simulate 3000 (fromList (take iterations (repeat 0))) (fromList (take iterations (repeat 0.0)))  
                         iterations karmbandit (matrix karmbandit (map fromIntegral [1..(runs * 10)])* 0.0) (matrix karmbandit (map fromIntegral [1..(runs*10)]) * 0.0 ) (matrix karmbandit (map fromIntegral [1..(runs * 10)])* 0.0)
                            where
-                             simulate :: Int -> Vector Int -> Vector Double -> Int -> Int -> Matrix Double -> Matrix Double -> Matrix Double -> IO (Vector Double) 
+                             simulate :: Int -> Vector Int -> Vector Double -> Int -> Int -> Matrix Double -> Matrix Double -> Matrix Double -> IO () 
                              simulate x recordsaver optimalsaver iter k q n bandit =
                                case () of _
                                             | x >= iter -> do
@@ -98,9 +102,9 @@ runsimulations  alpha = simulate 3000 (fromList (take iterations (repeat 0))) (f
                                                       print $ size $ a1
                                                       print $ size $ bandit
                                                       let range = (size $ a1) in
-                                                        let r = [  bandit `atIndex` (x,y)| x <- [0..range], y <- (Numeric.LinearAlgebra.toList a1) ] in
-                                                          return $ Numeric.LinearAlgebra.accum  optimalsaver const [(x - 1,fromIntegral mm)]
-                                                      return $ Numeric.LinearAlgebra.accum  optimalsaver const [(x - 1,fromIntegral mm)]
+                                                        let r = [  bandit `atIndex` (x,round y)| (x,y) <- zip  [0..range] (Numeric.LinearAlgebra.toList a1) ] in
+                                                          printf "Length of R is [%d]" (length r) 
+                                                      -- return $ Numeric.LinearAlgebra.accum  optimalsaver const [(x - 1,fromIntegral mm)]
 
                                                       
                                             | x < iter ->  simulate (x + 1 ) recordsaver optimalsaver iter k q n bandit
