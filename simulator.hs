@@ -89,6 +89,9 @@ slicen n range a1 =
 
 slicer :: Matrix Double -> Int -> Vector Double -> [Double] 
 slicer bandit range a1 = [  bandit `atIndex` (x,round y)| (x,y) <- zip  [0..range] (Numeric.LinearAlgebra.toList a1) ] 
+
+currentalpha  :: Bool -> Vector Double -> Vector Double  
+currentalpha a v = if True then v else (cmap (1/) v)
   
 runsimulations :: Double ->  IO (Vector Double )
 runsimulations  alpha = simulate 3000 (fromList (take iterations (repeat 0.0))) (fromList (take iterations (repeat 0.0)))  
@@ -112,6 +115,7 @@ runsimulations  alpha = simulate 3000 (fromList (take iterations (repeat 0.0))) 
                                                         let r = slicer bandit range a1 in
                                                           let rs =( Numeric.LinearAlgebra.accum  rewardsaver const [(x - 1,(listaverage r))]) in
                                                             let newn = slicen n range a1 in
+                                                              let calpha = currentalpha True newn in
  
                                                               return $ Numeric.LinearAlgebra.accum  optimalsaver const [(x - 1,fromIntegral mm)]
 
