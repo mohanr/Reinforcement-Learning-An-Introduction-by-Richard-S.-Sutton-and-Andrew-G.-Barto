@@ -34,9 +34,11 @@ uniformrandvector r  = do
   seed <- randomIO
   return  $ randomVector seed Uniform r
 
-converttooneszeros :: (Vector Double) -> IO (Vector Double)
+converttooneszeros :: (Vector Double) ->  IO (Vector Double)
 converttooneszeros m = do
   return $ step (m - 0.1)
+converttooneszeros1 :: (Fractional e, Ord e, Container c e, Monad m) => c e -> m (c Z)
+converttooneszeros1 = return . toZ. step . cmap (subtract 0.1)
 
 randomlist :: Int -> Double -> Int -> Double-> IO [Double]
 randomlist a a1 b b1 = getStdGen >>= return . Data.Foldable.toList .Data.Array.listArray(a,b) . randomRs (a1,b1)
@@ -80,6 +82,14 @@ listaverage :: (Fractional e )  => [e] -> e
 listaverage l = let (sum,count) = foldr ( \lambda (s,c) -> (s+lambda,c+1)) (0,0) l in
                   sum/count
 
+slicen :: Matrix Double -> Int -> Vector Double -> Vector Double 
+slicen n range a1 =
+  let newn = [  n `atIndex` (x,round y)| (x,y) <- zip  [0..range] (Numeric.LinearAlgebra.toList a1) ] in
+    cmap (+1) (fromList newn :: Vector Double)
+
+slicer :: Matrix Double -> Int -> Vector Double -> [Double] 
+slicer bandit range a1 = [  bandit `atIndex` (x,round y)| (x,y) <- zip  [0..range] (Numeric.LinearAlgebra.toList a1) ] 
+  
 runsimulations :: Double ->  IO (Vector Double )
 runsimulations  alpha = simulate 3000 (fromList (take iterations (repeat 0.0))) (fromList (take iterations (repeat 0.0)))  
                         iterations karmbandit (matrix karmbandit (map fromIntegral [1..(runs * 10)])* 0.0) (matrix karmbandit (map fromIntegral [1..(runs*10)]) * 0.0 ) (matrix karmbandit (map fromIntegral [1..(runs * 10)])* 0.0)
@@ -99,9 +109,11 @@ runsimulations  alpha = simulate 3000 (fromList (take iterations (repeat 0.0))) 
                                                       print $ size $ a1
                                                       print $ size $ bandit
                                                       let range = (size $ a1) in
-                                                        let r = [  bandit `atIndex` (x,round y)| (x,y) <- zip  [0..range] (Numeric.LinearAlgebra.toList a1) ] in
+                                                        let r = slicer bandit range a1 in
                                                           let rs =( Numeric.LinearAlgebra.accum  rewardsaver const [(x - 1,(listaverage r))]) in
-                                                            return $ Numeric.LinearAlgebra.accum  optimalsaver const [(x - 1,fromIntegral mm)]
+                                                            let newn = slicen n range a1 in
+ 
+                                                              return $ Numeric.LinearAlgebra.accum  optimalsaver const [(x - 1,fromIntegral mm)]
 
                                                       
                                             | x < iter ->  simulate (x + 1 ) rewardsaver optimalsaver iter k q n bandit
